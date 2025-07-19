@@ -1,0 +1,152 @@
+Build a production-grade, horizontally scalable CRM application for an Online Bond Provider Platform (OBPP) in India using the following stack:
+
+Frontend: Next.js (React-based)
+
+Backend: Node.js (Express.js)
+
+Database: MySQL (hosted on a separate instance)
+
+Dev Environment: Replit (code to be production-deployable)
+
+Architecture: Horizontal scaling-ready (stateless Node.js backend with JWT auth)
+
+🔑 Security & Access Requirements:
+OTP-based Login (Email only, no passwords)
+
+User enters email ID → receives OTP → authenticates.
+
+OTP service via Nodemailer (SMTP) or any Email API.
+
+OTP expiry & invalidation after use.
+
+Store login history (timestamp, IP, user-agent).
+
+Role-Based Access Control (RBAC):
+
+Admin
+
+Sales
+
+Support
+
+Relationship Manager (RM)
+
+Viewer
+
+Roles to control both API access and UI access (Next.js).
+
+JWT-based session management for stateless horizontal scaling.
+
+Secure APIs: Input sanitization, anti-SQL injection, proper CORS policies.
+
+📊 Modules to Build:
+Dashboard (Interactive Graphs with Recharts or Chart.js):
+
+Active Leads
+
+Active Customers
+
+Subscriptions
+
+Sales Performance
+
+RFQs Sent / Received
+
+Core CRM Modules:
+
+Leads Management (CRUD, source, status)
+
+Customers (with KYC, demat accounts, investments)
+
+Subscriptions (Newsletter, Webinars)
+
+Reports (Conversion funnel, activity logs)
+
+Sales Pipeline (Lead → Customer tracking)
+
+Email Templates (Save, Edit, Use)
+
+Support Tickets (Query, Status, Resolution)
+
+RFQ Management:
+
+Integration with NSE RFQ API (submit, track, updates)
+
+Store all RFQ activity in DB
+
+RFQ status dashboard
+
+🏗 Technology Stack:
+Frontend (Separate App Layer)
+Next.js with API routes for admin components
+
+Charts: Recharts / Chart.js
+
+Protected routes via role-checks
+
+Backend (Separate App Layer, Stateless):
+Node.js with Express
+
+REST API (JWT Protected)
+
+Nodemailer / Email API for OTP
+
+RBAC implemented on APIs
+
+NSE RFQ API integration
+
+Sequelize / Prisma ORM for MySQL
+
+Zod / Joi validation
+
+Database (Separate Instance):
+MySQL Database
+
+Separate schema for:
+
+Users
+
+Roles & Permissions
+
+Leads
+
+Customers
+
+RFQs
+
+Support Tickets
+
+Email Templates
+
+Login Logs
+
+⚙️ Scalability & Hosting Structure:
+Component	Hosted On	Architecture
+Frontend	Instance A	Next.js (Stateless)
+Backend	Instance B	Node.js + Express (Stateless, horizontal scale)
+Database	Instance C	MySQL (Dedicated RDS or Managed DB Instance)
+
+🔒 Security Best Practices to Include:
+HTTPS enforced
+
+CORS configured per environment
+
+Secure OTP lifecycle
+
+Role-based restrictions at API and UI
+
+Input validation & sanitization
+
+API rate limiting
+
+Proper JWT expiration & refresh
+
+📥 Deliverables from Replit AI:
+✅ Next.js app with all pages/components
+✅ Node.js backend with modular APIs
+✅ Secure OTP login
+✅ JWT auth with RBAC
+✅ MySQL schema SQL dump
+✅ Dashboard with graphs
+✅ Integration placeholder for NSE RFQ API
+✅ Documentation for environment setup, scaling, and deployment
