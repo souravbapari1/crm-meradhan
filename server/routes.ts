@@ -471,6 +471,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/users", authMiddleware, requireRole(['admin']), async (req, res) => {
+    try {
+      const userData = req.body;
+      const user = await storage.createUser(userData);
+      
+      // Log activity
+      const clientIP = req.ip || "unknown";
+      const userAgent = req.get("User-Agent") || "unknown";
+      await storage.createActivityLog(
+        (req as any).user.userId,
+        'user',
+        user.id,
+        'create',
+        { userName: user.name, userRole: user.role },
+        clientIP,
+        userAgent
+      );
+      
+      res.status(201).json(user);
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Activity logs routes (admin only)
+  app.get("/api/activity-logs", authMiddleware, requireRole(['admin']), async (req, res) => {
+    try {
+      const logs = await storage.getRecentActivities(50);
+      res.json(logs);
+    } catch (error) {
+      console.error("Get activity logs error:", error);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
