@@ -413,8 +413,23 @@ export class DatabaseStorage implements IStorage {
     return activityLog;
   }
 
-  async getActivityLogs(limit: number = 50): Promise<ActivityLog[]> {
-    return await db.select().from(activityLogs).orderBy(desc(activityLogs.createdAt)).limit(limit);
+  async getActivityLogs(limit: number = 50): Promise<any[]> {
+    return await db.select({
+      id: activityLogs.id,
+      userId: activityLogs.userId,
+      action: activityLogs.action,
+      entityType: activityLogs.entityType,
+      entityId: activityLogs.entityId,
+      details: activityLogs.details,
+      ipAddress: activityLogs.ipAddress,
+      userAgent: activityLogs.userAgent,
+      createdAt: activityLogs.createdAt,
+      userName: users.name,
+    })
+    .from(activityLogs)
+    .leftJoin(users, eq(activityLogs.userId, users.id))
+    .orderBy(desc(activityLogs.createdAt))
+    .limit(limit);
   }
 
   // Dashboard/Analytics methods

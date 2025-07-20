@@ -19,6 +19,7 @@ interface ActivityLog {
   ipAddress: string;
   userAgent: string;
   createdAt: string;
+  userName?: string;
 }
 
 export default function AuditLogs() {
@@ -94,9 +95,9 @@ export default function AuditLogs() {
             className="gap-2"
             onClick={() => {
               const csvContent = [
-                "Timestamp,Entity,Action,Details,User ID,IP Address",
+                "Timestamp,Entity,Action,Details,User ID,User Full Name,IP Address",
                 ...filteredLogs.map(log => 
-                  `"${format(new Date(log.createdAt), "MMM dd, yyyy HH:mm")}","${log.entityType}","${log.action}","${JSON.stringify(log.details).replace(/"/g, '""')}","${log.userId}","${log.ipAddress}"`
+                  `"${format(new Date(log.createdAt), "MMM dd, yyyy HH:mm")}","${log.entityType}","${log.action}","${JSON.stringify(log.details).replace(/"/g, '""')}","${log.userId}","${log.userName || 'Unknown'}","${log.ipAddress}"`
                 )
               ].join('\n');
               
