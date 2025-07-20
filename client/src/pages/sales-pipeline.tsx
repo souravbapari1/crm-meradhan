@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Lead, Customer } from "@/types";
 import { Users, UserCheck, TrendingUp, Target, Eye, ArrowRight } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 export default function SalesPipeline() {
   const { data: leads = [] } = useQuery<Lead[]>({
@@ -158,6 +159,73 @@ export default function SalesPipeline() {
                   {conversionRate.toFixed(1)}%
                 </Badge>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Detailed Pipeline View */}
+        <Card className="card-shadow">
+          <CardHeader>
+            <CardTitle>Detailed Pipeline View</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {pipelineStages.map((stage) => {
+                const Icon = stage.icon;
+                return (
+                  <Card key={stage.stage} className="border-2 hover:border-primary/50 transition-colors cursor-pointer">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`p-2 rounded-lg ${stage.color}`}>
+                          <Icon className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{stage.stage}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {stage.count} leads
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Show individual leads */}
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {stage.leads.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-4">
+                            No leads in this stage
+                          </p>
+                        ) : (
+                          stage.leads.map((lead: any) => (
+                            <div key={lead.id} className="bg-muted/30 rounded p-3 hover:bg-muted/50 transition-colors">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <p className="font-medium text-sm">{lead.name}</p>
+                                  <p className="text-xs text-muted-foreground">{lead.email}</p>
+                                  {lead.company && (
+                                    <p className="text-xs text-muted-foreground">{lead.company}</p>
+                                  )}
+                                </div>
+                                {lead.investmentAmount && (
+                                  <div className="text-xs font-medium text-green-600">
+                                    ₹{parseFloat(lead.investmentAmount).toLocaleString()}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-2 flex items-center justify-between">
+                                <Badge variant="outline" className="text-xs">
+                                  {lead.source}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDistanceToNow(new Date(lead.createdAt), { addSuffix: true })}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
