@@ -433,10 +433,13 @@ export class DatabaseStorage implements IStorage {
   async getRecentActivities(limit: number = 10): Promise<any[]> {
     return await db.select({
       id: activityLogs.id,
+      userId: activityLogs.userId,
       action: activityLogs.action,
       entityType: activityLogs.entityType,
       entityId: activityLogs.entityId,
       details: activityLogs.details,
+      ipAddress: activityLogs.ipAddress,
+      userAgent: activityLogs.userAgent,
       createdAt: activityLogs.createdAt,
       userName: users.name,
     })
