@@ -40,6 +40,7 @@ Preferred communication style: Simple, everyday language.
 - **Role-Based Access Control**: Admin, Sales, Support, Relationship Manager (RM), Viewer roles
 - **Session Management**: JWT tokens for stateless horizontal scaling
 - **Security Features**: Login history tracking, IP and user-agent logging, OTP expiration
+- **Admin Protection**: Main admin account (vikas.kukreja@meradhan.co) cannot be deactivated for system security
 
 ### CRM Modules
 1. **Dashboard**: Interactive charts and KPI widgets using Recharts

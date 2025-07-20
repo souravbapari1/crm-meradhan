@@ -511,12 +511,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = parseInt(req.params.id);
       const userData = req.body;
       
-      // Check if trying to deactivate the system admin (user ID 1 or the original admin)
+      // Check if trying to deactivate the main admin account
       if (userData.hasOwnProperty('isActive') && !userData.isActive) {
         const targetUser = await storage.getUser(userId);
-        if (targetUser && (targetUser.email === 'vikas.kukreja@meradhan.co' || userId === 1)) {
+        if (targetUser && targetUser.email === 'vikas.kukreja@meradhan.co') {
           return res.status(403).json({ 
-            message: "Cannot deactivate the system administrator account" 
+            message: "Cannot deactivate the main administrator account" 
           });
         }
       }
