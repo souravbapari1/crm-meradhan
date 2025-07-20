@@ -2,7 +2,12 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  phone?: string;
   role: string;
+  isActive: boolean;
+  lastLogin?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Lead {

@@ -23,6 +23,7 @@ import { formatDistanceToNow } from "date-fns";
 const userFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
   role: z.enum(["admin", "sales", "support", "rm", "viewer"], {
     required_error: "Please select a role",
   }),
@@ -44,6 +45,7 @@ function UserForm({ user, onSuccess }: UserFormProps) {
     defaultValues: {
       name: user?.name || "",
       email: user?.email || "",
+      phone: user?.phone || "",
       role: (user?.role as any) || "viewer",
     },
   });
@@ -125,6 +127,23 @@ function UserForm({ user, onSuccess }: UserFormProps) {
                   placeholder="Enter email address" 
                   {...field} 
                   disabled={isEditing} // Email cannot be changed after creation
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="Enter phone number" 
+                  {...field} 
                 />
               </FormControl>
               <FormMessage />
@@ -383,6 +402,7 @@ export default function UserManagement() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Last Login</TableHead>
@@ -395,6 +415,7 @@ export default function UserManagement() {
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>{user.email}</TableCell>
+                      <TableCell className="text-muted-foreground">{user.phone || "Not provided"}</TableCell>
                       <TableCell>{getRoleBadge(user.role)}</TableCell>
                       <TableCell>{getStatusBadge(user.isActive)}</TableCell>
                       <TableCell className="text-muted-foreground">

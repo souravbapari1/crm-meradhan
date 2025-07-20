@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   name: text("name").notNull(),
+  phone: text("phone"),
   role: text("role").notNull().default("viewer"), // admin, sales, support, rm, viewer
   isActive: boolean("is_active").notNull().default(true),
   lastLogin: timestamp("last_login"),

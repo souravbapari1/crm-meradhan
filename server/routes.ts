@@ -506,6 +506,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/users/:id", authMiddleware, requireRole(['admin']), async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const userData = req.body;
+      
+      // Check if trying to deactivate the system admin (user ID 1 or the original admin)
+      if (userData.hasOwnProperty('isActive') && !userData.isActive) {
+        const targetUser = await storage.getUser(userId);
+        if (targetUser && (targetUser.email === 'vikas.kukreja@meradhan.co' || userId === 1)) {
+          return res.status(403).json({ 
+            message: "Cannot deactivate the system administrator account" 
+          });
+        }
+      }
+      
+      const updatedUser = await storage.updateUser(userId, userData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Log activity
+      const clientIP = getClientIP(req);
+      const userAgent = req.get("User-Agent") || "unknown";
+      await storage.createActivityLog(
+        (req as any).user.userId,
+        'user',
+        userId,
+        'update',
+        { userName: updatedUser.name, changes: Object.keys(userData) },
+        clientIP,
+        userAgent
+      );
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
   // Lead follow-up routes
   app.get("/api/leads/:id/follow-ups", authMiddleware, async (req, res) => {
     try {
