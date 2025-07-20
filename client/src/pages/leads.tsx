@@ -14,8 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { Lead } from "@/types";
-import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, UserPlus } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Plus, Search, Filter, MoreHorizontal, Edit, Trash2, UserPlus, MessageSquare, Calendar } from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
 
 export default function Leads() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,10 +23,39 @@ export default function Leads() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [viewingFollowUps, setViewingFollowUps] = useState<Lead | null>(null);
+  const [newFollowUpNote, setNewFollowUpNote] = useState("");
+  const [newFollowUpDate, setNewFollowUpDate] = useState("");
   const { toast } = useToast();
 
   const { data: leads = [], isLoading } = useQuery<Lead[]>({
     queryKey: ["/api/leads"],
+  });
+
+  const { data: followUps = [] } = useQuery({
+    queryKey: ["/api/leads", viewingFollowUps?.id, "follow-ups"],
+    enabled: !!viewingFollowUps,
+  });
+
+  const addFollowUpMutation = useMutation({
+    mutationFn: ({ leadId, note, followUpDate }: { leadId: number; note: string; followUpDate?: string }) =>
+      api.post(`/leads/${leadId}/follow-ups`, { note, followUpDate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/leads", viewingFollowUps?.id, "follow-ups"] });
+      setNewFollowUpNote("");
+      setNewFollowUpDate("");
+      toast({
+        title: "Success",
+        description: "Follow-up note added successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to add follow-up",
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -250,6 +279,10 @@ export default function Leads() {
                               <Edit className="mr-2 h-4 w-4" />
                               Edit
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setViewingFollowUps(lead)}>
+                              <MessageSquare className="mr-2 h-4 w-4" />
+                              Follow-up Notes
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => handleConvertToCustomer(lead.id)}
                               disabled={lead.status === "converted"}
@@ -286,6 +319,84 @@ export default function Leads() {
                 lead={editingLead} 
                 onSuccess={() => setEditingLead(null)} 
               />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Follow-up Notes Modal */}
+        <Dialog open={!!viewingFollowUps} onOpenChange={() => setViewingFollowUps(null)}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Follow-up Notes - {viewingFollowUps?.name}</DialogTitle>
+            </DialogHeader>
+            {viewingFollowUps && (
+              <div className="space-y-4">
+                {/* Add new follow-up */}
+                <div className="border rounded-lg p-4 bg-muted/50">
+                  <h4 className="font-medium mb-3">Add Follow-up Note</h4>
+                  <div className="space-y-3">
+                    <Textarea
+                      placeholder="Enter follow-up notes..."
+                      value={newFollowUpNote}
+                      onChange={(e) => setNewFollowUpNote(e.target.value)}
+                      rows={3}
+                    />
+                    <div className="flex gap-3 items-end">
+                      <div className="flex-1">
+                        <Label htmlFor="followUpDate">Next Follow-up Date (Optional)</Label>
+                        <Input
+                          id="followUpDate"
+                          type="datetime-local"
+                          value={newFollowUpDate}
+                          onChange={(e) => setNewFollowUpDate(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        onClick={() => {
+                          if (!newFollowUpNote.trim()) return;
+                          addFollowUpMutation.mutate({
+                            leadId: viewingFollowUps.id,
+                            note: newFollowUpNote,
+                            followUpDate: newFollowUpDate || undefined,
+                          });
+                        }}
+                        disabled={!newFollowUpNote.trim() || addFollowUpMutation.isPending}
+                      >
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Add Note
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Existing follow-ups */}
+                <div className="space-y-3">
+                  <h4 className="font-medium">Follow-up History</h4>
+                  {followUps.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No follow-up notes yet</p>
+                  ) : (
+                    followUps.map((followUp: any) => (
+                      <div key={followUp.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="font-medium text-sm">
+                            {followUp.createdByName || "Unknown User"}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(new Date(followUp.createdAt), "MMM dd, yyyy 'at' h:mm a")}
+                          </div>
+                        </div>
+                        <p className="text-sm mb-2">{followUp.note}</p>
+                        {followUp.followUpDate && (
+                          <div className="text-xs text-muted-foreground flex items-center">
+                            <Calendar className="mr-1 h-3 w-3" />
+                            Next follow-up: {format(new Date(followUp.followUpDate), "MMM dd, yyyy 'at' h:mm a")}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </DialogContent>
         </Dialog>

@@ -53,6 +53,16 @@ export const leads = pgTable("leads", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Follow-up notes table for leads
+export const leadFollowUps = pgTable("lead_follow_ups", {
+  id: serial("id").primaryKey(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  note: text("note").notNull(),
+  followUpDate: timestamp("follow_up_date"),
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Customers table
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
@@ -154,6 +164,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   createdTemplates: many(emailTemplates),
   activityLogs: many(activityLogs),
   loginLogs: many(loginLogs),
+  leadFollowUps: many(leadFollowUps),
 }));
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -162,6 +173,18 @@ export const leadsRelations = relations(leads, ({ one, many }) => ({
     references: [users.id],
   }),
   customer: many(customers),
+  followUps: many(leadFollowUps),
+}));
+
+export const leadFollowUpsRelations = relations(leadFollowUps, ({ one }) => ({
+  lead: one(leads, {
+    fields: [leadFollowUps.leadId],
+    references: [leads.id],
+  }),
+  createdByUser: one(users, {
+    fields: [leadFollowUps.createdBy],
+    references: [users.id],
+  }),
 }));
 
 export const customersRelations = relations(customers, ({ one, many }) => ({
@@ -271,6 +294,11 @@ export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
   updatedAt: true,
 });
 
+export const insertLeadFollowUpSchema = createInsertSchema(leadFollowUps).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -289,3 +317,5 @@ export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type OTP = typeof otps.$inferSelect;
 export type LoginLog = typeof loginLogs.$inferSelect;
 export type ActivityLog = typeof activityLogs.$inferSelect;
+export type LeadFollowUp = typeof leadFollowUps.$inferSelect;
+export type InsertLeadFollowUp = z.infer<typeof insertLeadFollowUpSchema>;

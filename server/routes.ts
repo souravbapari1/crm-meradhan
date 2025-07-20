@@ -2,13 +2,23 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertLeadSchema, insertCustomerSchema, insertRfqSchema, insertSupportTicketSchema, insertEmailTemplateSchema } from "@shared/schema";
+import { insertLeadSchema, insertCustomerSchema, insertRfqSchema, insertSupportTicketSchema, insertEmailTemplateSchema, insertLeadFollowUpSchema } from "@shared/schema";
 import { authMiddleware, requireRole } from "./middleware/auth";
 import { otpService } from "./services/otpService";
 import { emailService } from "./services/emailService";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
+
+// Helper function to get real client IP address
+function getClientIP(req: any): string {
+  return req.get('X-Forwarded-For')?.split(',')[0]?.trim() || 
+         req.get('X-Real-IP') || 
+         req.get('CF-Connecting-IP') ||
+         req.ip || 
+         req.connection.remoteAddress || 
+         "unknown";
+}
 
 // Validation schemas
 const loginSchema = z.object({
@@ -81,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       // Log successful login
-      const clientIP = req.ip || req.connection.remoteAddress || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createLoginLog(user.id, email, clientIP, userAgent, true);
 
@@ -186,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const lead = await storage.createLead(leadData);
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -216,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -245,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -291,7 +301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customer = await storage.createCustomer(customerData);
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -321,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -359,7 +369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rfq = await storage.createRFQ({ ...rfqData, rfqNumber });
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -405,7 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ticket = await storage.createSupportTicket({ ...ticketData, ticketNumber });
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -441,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const template = await storage.createEmailTemplate(templateData);
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -477,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.createUser(userData);
       
       // Log activity
-      const clientIP = req.ip || "unknown";
+      const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       await storage.createActivityLog(
         (req as any).user.userId,
@@ -493,6 +503,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Create user error:", error);
       res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  // Lead follow-up routes
+  app.get("/api/leads/:id/follow-ups", authMiddleware, async (req, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const followUps = await storage.getLeadFollowUps(leadId);
+      res.json(followUps);
+    } catch (error) {
+      console.error("Get lead follow-ups error:", error);
+      res.status(500).json({ message: "Failed to fetch follow-ups" });
+    }
+  });
+
+  app.post("/api/leads/:id/follow-ups", authMiddleware, async (req, res) => {
+    try {
+      const leadId = parseInt(req.params.id);
+      const followUpData = insertLeadFollowUpSchema.parse({
+        ...req.body,
+        leadId,
+        createdBy: (req as any).user.userId,
+      });
+      
+      const followUp = await storage.createLeadFollowUp(followUpData);
+      
+      // Log activity
+      const clientIP = getClientIP(req);
+      const userAgent = req.get("User-Agent") || "unknown";
+      await storage.createActivityLog(
+        (req as any).user.userId,
+        'lead',
+        leadId,
+        'update',
+        { action: 'follow_up_added', note: followUpData.note },
+        clientIP,
+        userAgent
+      );
+      
+      res.status(201).json(followUp);
+    } catch (error) {
+      console.error("Create follow-up error:", error);
+      res.status(500).json({ message: "Failed to create follow-up" });
     }
   });
 

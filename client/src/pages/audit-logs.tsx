@@ -192,7 +192,7 @@ export default function AuditLogs() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            User #{log.userId}
+                            {log.userName || 'Unknown User'} (#{log.userId})
                           </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">

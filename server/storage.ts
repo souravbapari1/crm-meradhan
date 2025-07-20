@@ -9,6 +9,7 @@ import {
   otps, 
   loginLogs, 
   activityLogs,
+  leadFollowUps,
   type User, 
   type InsertUser,
   type Lead,
@@ -25,7 +26,9 @@ import {
   type InsertSubscription,
   type OTP,
   type LoginLog,
-  type ActivityLog
+  type ActivityLog,
+  type LeadFollowUp,
+  type InsertLeadFollowUp
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, like, sql, count } from "drizzle-orm";
@@ -212,6 +215,27 @@ export class DatabaseStorage implements IStorage {
 
   async getLeadsByAssignee(userId: number): Promise<Lead[]> {
     return await db.select().from(leads).where(eq(leads.assignedTo, userId)).orderBy(desc(leads.createdAt));
+  }
+
+  // Lead follow-up methods
+  async getLeadFollowUps(leadId: number): Promise<LeadFollowUp[]> {
+    return await db.select({
+      id: leadFollowUps.id,
+      leadId: leadFollowUps.leadId,
+      note: leadFollowUps.note,
+      followUpDate: leadFollowUps.followUpDate,
+      createdBy: leadFollowUps.createdBy,
+      createdAt: leadFollowUps.createdAt,
+      createdByName: users.name,
+    }).from(leadFollowUps)
+    .leftJoin(users, eq(leadFollowUps.createdBy, users.id))
+    .where(eq(leadFollowUps.leadId, leadId))
+    .orderBy(desc(leadFollowUps.createdAt));
+  }
+
+  async createLeadFollowUp(followUp: InsertLeadFollowUp): Promise<LeadFollowUp> {
+    const [newFollowUp] = await db.insert(leadFollowUps).values(followUp).returning();
+    return newFollowUp;
   }
 
   // Customer methods

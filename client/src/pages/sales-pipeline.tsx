@@ -18,40 +18,44 @@ export default function SalesPipeline() {
   });
 
   // Calculate pipeline stages
-  const newLeads = leads.filter(lead => lead.status === "new").length;
-  const contactedLeads = leads.filter(lead => lead.status === "contacted").length;
-  const qualifiedLeads = leads.filter(lead => lead.status === "qualified").length;
-  const convertedLeads = leads.filter(lead => lead.status === "converted").length;
+  const newLeads = leads.filter(lead => lead.status === "new");
+  const contactedLeads = leads.filter(lead => lead.status === "contacted");
+  const qualifiedLeads = leads.filter(lead => lead.status === "qualified");
+  const convertedLeads = leads.filter(lead => lead.status === "converted");
 
   const totalLeads = leads.length;
-  const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
+  const conversionRate = totalLeads > 0 ? (convertedLeads.length / totalLeads) * 100 : 0;
 
   const pipelineStages = [
     {
       stage: "New Leads",
-      count: newLeads,
-      percentage: totalLeads > 0 ? (newLeads / totalLeads) * 100 : 0,
+      count: newLeads.length,
+      leads: newLeads,
+      percentage: totalLeads > 0 ? (newLeads.length / totalLeads) * 100 : 0,
       color: "bg-blue-500",
       icon: Users,
     },
     {
       stage: "Contacted",
-      count: contactedLeads,
-      percentage: totalLeads > 0 ? (contactedLeads / totalLeads) * 100 : 0,
+      count: contactedLeads.length,
+      leads: contactedLeads,
+      percentage: totalLeads > 0 ? (contactedLeads.length / totalLeads) * 100 : 0,
       color: "bg-yellow-500",
       icon: Target,
     },
     {
       stage: "Qualified",
-      count: qualifiedLeads,
-      percentage: totalLeads > 0 ? (qualifiedLeads / totalLeads) * 100 : 0,
+      count: qualifiedLeads.length,
+      leads: qualifiedLeads,
+      percentage: totalLeads > 0 ? (qualifiedLeads.length / totalLeads) * 100 : 0,
       color: "bg-orange-500",
       icon: TrendingUp,
     },
     {
       stage: "Converted",
-      count: convertedLeads,
-      percentage: totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0,
+      count: convertedLeads.length,
+      leads: convertedLeads,
+      percentage: totalLeads > 0 ? (convertedLeads.length / totalLeads) * 100 : 0,
       color: "bg-green-500",
       icon: UserCheck,
     },
