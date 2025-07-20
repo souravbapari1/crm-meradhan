@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -62,125 +63,150 @@ export default function AuditLogs() {
 
   if (isLoading) {
     return (
+      <AppLayout>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
+              <p className="text-muted-foreground">Track all system activities and changes</p>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="p-6">
+              <div className="text-center">Loading audit logs...</div>
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
             <p className="text-muted-foreground">Track all system activities and changes</p>
           </div>
+          <Button 
+            variant="outline" 
+            className="gap-2"
+            onClick={() => {
+              const csvContent = [
+                "Timestamp,Entity,Action,Details,User ID,IP Address",
+                ...filteredLogs.map(log => 
+                  `"${format(new Date(log.createdAt), "MMM dd, yyyy HH:mm")}","${log.entityType}","${log.action}","${JSON.stringify(log.details).replace(/"/g, '""')}","${log.userId}","${log.ipAddress}"`
+                )
+              ].join('\n');
+              
+              const blob = new Blob([csvContent], { type: 'text/csv' });
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `audit-logs-${format(new Date(), "yyyy-MM-dd")}.csv`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              window.URL.revokeObjectURL(url);
+            }}
+          >
+            <Download className="h-4 w-4" />
+            Export Logs
+          </Button>
         </div>
+
         <Card>
-          <CardContent className="p-6">
-            <div className="text-center">Loading audit logs...</div>
+          <CardHeader>
+            <CardTitle>Activity History</CardTitle>
+            <CardDescription>
+              Complete log of all user actions and system events
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mb-6">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search activities..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="px-3 py-2 border border-input bg-background rounded-md text-sm"
+              >
+                <option value="all">All Types</option>
+                <option value="user">Users</option>
+                <option value="lead">Leads</option>
+                <option value="customer">Customers</option>
+                <option value="rfq">RFQs</option>
+                <option value="ticket">Support Tickets</option>
+                <option value="template">Email Templates</option>
+              </select>
+            </div>
+
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Timestamp</TableHead>
+                    <TableHead>Entity</TableHead>
+                    <TableHead>Action</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>IP Address</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLogs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6">
+                        No audit logs found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredLogs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="font-medium">
+                          {format(new Date(log.createdAt), "MMM dd, yyyy HH:mm")}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getEntityIcon(log.entityType)}
+                            <span className="capitalize">{log.entityType}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getActionColor(log.action)}>
+                            {log.action.toUpperCase()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-xs">
+                          <div className="truncate text-sm text-muted-foreground">
+                            {JSON.stringify(log.details)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            User #{log.userId}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {log.ipAddress}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Logs</h1>
-          <p className="text-muted-foreground">Track all system activities and changes</p>
-        </div>
-        <Button variant="outline" className="gap-2">
-          <Download className="h-4 w-4" />
-          Export Logs
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity History</CardTitle>
-          <CardDescription>
-            Complete log of all user actions and system events
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search activities..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 border border-input bg-background rounded-md text-sm"
-            >
-              <option value="all">All Types</option>
-              <option value="user">Users</option>
-              <option value="lead">Leads</option>
-              <option value="customer">Customers</option>
-              <option value="rfq">RFQs</option>
-              <option value="ticket">Support Tickets</option>
-              <option value="template">Email Templates</option>
-            </select>
-          </div>
-
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead>Action</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>IP Address</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLogs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6">
-                      No audit logs found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredLogs.map((log) => (
-                    <TableRow key={log.id}>
-                      <TableCell className="font-medium">
-                        {format(new Date(log.createdAt), "MMM dd, yyyy HH:mm")}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getEntityIcon(log.entityType)}
-                          <span className="capitalize">{log.entityType}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getActionColor(log.action)}>
-                          {log.action.toUpperCase()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-xs">
-                        <div className="truncate text-sm text-muted-foreground">
-                          {JSON.stringify(log.details)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          User #{log.userId}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {log.ipAddress}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </AppLayout>
   );
 }
