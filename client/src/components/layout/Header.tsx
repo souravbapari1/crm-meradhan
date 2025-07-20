@@ -38,7 +38,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               <TrendingUp className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">BondCRM</h1>
+              <h1 className="text-xl font-bold text-foreground">MeraDhan CRM</h1>
               <p className="text-xs text-muted-foreground">SEBI Registered OBPP</p>
             </div>
           </div>

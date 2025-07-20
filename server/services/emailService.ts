@@ -19,13 +19,13 @@ export class EmailService {
   async sendOTP(email: string, otp: string): Promise<void> {
     try {
       const mailOptions = {
-        from: process.env.SMTP_FROM || "noreply@bondcrm.com",
+        from: process.env.SMTP_FROM || "noreply@meradhan.co",
         to: email,
-        subject: "BondCRM - Your Login OTP",
+        subject: "MeraDhan CRM - Your Login OTP",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">BondCRM</h1>
+              <h1 style="color: white; margin: 0;">MeraDhan CRM</h1>
               <p style="color: white; margin: 5px 0;">SEBI Registered OBPP</p>
             </div>
             <div style="padding: 30px; background: white;">
@@ -41,7 +41,7 @@ export class EmailService {
               </p>
               <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
               <p style="color: #9ca3af; font-size: 12px;">
-                This is an automated message from BondCRM. Please do not reply to this email.
+                This is an automated message from MeraDhan CRM. Please do not reply to this email.
               </p>
             </div>
           </div>
@@ -61,19 +61,19 @@ export class EmailService {
   async sendWelcomeEmail(email: string, name: string): Promise<void> {
     try {
       const mailOptions = {
-        from: process.env.SMTP_FROM || "noreply@bondcrm.com",
+        from: process.env.SMTP_FROM || "noreply@meradhan.co",
         to: email,
-        subject: "Welcome to BondCRM",
+        subject: "Welcome to MeraDhan CRM",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 20px; text-align: center;">
-              <h1 style="color: white; margin: 0;">Welcome to BondCRM</h1>
+              <h1 style="color: white; margin: 0;">Welcome to MeraDhan CRM</h1>
               <p style="color: white; margin: 5px 0;">SEBI Registered OBPP</p>
             </div>
             <div style="padding: 30px; background: white;">
               <h2 style="color: #1e40af; margin-bottom: 20px;">Hello ${name}!</h2>
               <p style="color: #64748b; margin-bottom: 20px;">
-                Welcome to BondCRM, India's leading Online Bond Provider Platform. 
+                Welcome to MeraDhan CRM, India's leading Online Bond Provider Platform. 
                 We're excited to have you on board!
               </p>
               <p style="color: #64748b; margin-bottom: 20px;">

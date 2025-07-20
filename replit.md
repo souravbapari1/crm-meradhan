@@ -1,8 +1,8 @@
-# BondCRM - Online Bond Provider Platform
+# MeraDhan CRM - Online Bond Provider Platform
 
 ## Overview
 
-BondCRM is a production-grade, horizontally scalable Customer Relationship Management application for an Online Bond Provider Platform (OBPP) in India. The application is built using a modern full-stack TypeScript architecture with a focus on security, scalability, and compliance with SEBI regulations.
+MeraDhan CRM is a production-grade, horizontally scalable Customer Relationship Management application for an Online Bond Provider Platform (OBPP) in India. The application is built using a modern full-stack TypeScript architecture with a focus on security, scalability, and compliance with SEBI regulations.
 
 ## User Preferences
 

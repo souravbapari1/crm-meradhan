@@ -72,7 +72,7 @@ export default function Login() {
           <div className="gradient-bg w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl font-bold">BondCRM</CardTitle>
+          <CardTitle className="text-2xl font-bold">MeraDhan CRM</CardTitle>
           <CardDescription>
             SEBI Registered OBPP - Secure Login
           </CardDescription>
