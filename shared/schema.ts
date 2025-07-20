@@ -278,6 +278,7 @@ export const insertRfqSchema = createInsertSchema(rfqs).omit({
 
 export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
   id: true,
+  ticketNumber: true,
   createdAt: true,
   updatedAt: true,
 });

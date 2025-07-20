@@ -411,7 +411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const ticketData = insertSupportTicketSchema.parse(req.body);
       // Generate ticket number
-      const ticketNumber = `TKT-${Date.now()}`;
+      const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
       const ticket = await storage.createSupportTicket({ ...ticketData, ticketNumber });
       
       // Log activity
