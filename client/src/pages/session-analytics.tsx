@@ -185,7 +185,7 @@ export default function SessionAnalytics() {
                             <div className="text-right">
                               <div className="font-medium">Login</div>
                               <div className="text-muted-foreground">
-                                {format(new Date(session.startTime), "MMM dd, HH:mm")} IST
+                                {format(new Date(session.startTime + 'Z'), "MMM dd, HH:mm")} IST
                               </div>
                             </div>
                           </div>
@@ -197,7 +197,7 @@ export default function SessionAnalytics() {
                               <div className="font-medium">Logout</div>
                               <div className="text-muted-foreground">
                                 {session.endTime ? 
-                                  format(new Date(session.endTime), "MMM dd, HH:mm") + " IST" :
+                                  format(new Date(session.endTime + 'Z'), "MMM dd, HH:mm") + " IST" :
                                   "Active"
                                 }
                               </div>
