@@ -551,7 +551,8 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(userSessions.userId, params.userId));
     }
 
-    const query = db.select({
+    // First get all sessions
+    let sessionsQuery = db.select({
       id: userSessions.id,
       userId: userSessions.userId,
       userName: users.name,
@@ -563,31 +564,41 @@ export class DatabaseStorage implements IStorage {
       browserName: userSessions.browserName,
       deviceType: userSessions.deviceType,
       endReason: userSessions.endReason,
-      pageViews: sql`json_agg(json_build_object(
-        'pagePath', ${pageViews.pagePath},
-        'pageTitle', ${pageViews.pageTitle},
-        'entryTime', ${pageViews.entryTime},
-        'exitTime', ${pageViews.exitTime},
-        'duration', ${pageViews.duration},
-        'scrollDepth', ${pageViews.scrollDepth},
-        'interactions', ${pageViews.interactions}
-      ) ORDER BY ${pageViews.entryTime}) FILTER (WHERE ${pageViews.id} IS NOT NULL)`
     })
     .from(userSessions)
     .leftJoin(users, eq(userSessions.userId, users.id))
-    .leftJoin(pageViews, eq(userSessions.id, pageViews.sessionId))
     .$dynamic();
 
     if (conditions.length > 0) {
-      return await query
-        .where(and(...conditions))
-        .groupBy(userSessions.id, users.name, users.email)
-        .orderBy(desc(userSessions.startTime));
-    } else {
-      return await query
-        .groupBy(userSessions.id, users.name, users.email)
-        .orderBy(desc(userSessions.startTime));
+      sessionsQuery = sessionsQuery.where(and(...conditions));
     }
+
+    const sessions = await sessionsQuery.orderBy(desc(userSessions.startTime));
+
+    // Then get page views for each session separately
+    const sessionsWithPageViews = await Promise.all(
+      sessions.map(async (session) => {
+        const sessionPageViews = await db.select({
+          pagePath: pageViews.pagePath,
+          pageTitle: pageViews.pageTitle,
+          entryTime: pageViews.entryTime,
+          exitTime: pageViews.exitTime,
+          duration: pageViews.duration,
+          scrollDepth: pageViews.scrollDepth,
+          interactions: pageViews.interactions,
+        })
+        .from(pageViews)
+        .where(eq(pageViews.sessionId, session.id))
+        .orderBy(pageViews.entryTime);
+
+        return {
+          ...session,
+          pageViews: sessionPageViews
+        };
+      })
+    );
+
+    return sessionsWithPageViews;
   }
 
   // Page tracking methods
