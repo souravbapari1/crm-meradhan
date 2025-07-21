@@ -163,7 +163,7 @@ export default function SessionAnalytics() {
                       </div>
                       <div className="text-right">
                         <div className="text-sm">
-                          {format(new Date(new Date(session.startTime).getTime() + (5.5 * 60 * 60 * 1000)), "MMM dd, yyyy HH:mm")} IST
+                          {format(new Date(new Date(session.startTime).getTime() - (4.5 * 60 * 60 * 1000)), "MMM dd, yyyy HH:mm")} IST
                         </div>
                         {session.endReason && (
                           <Badge className={getEndReasonColor(session.endReason)}>
@@ -221,7 +221,7 @@ export default function SessionAnalytics() {
                                     </div>
                                   </TableCell>
                                   <TableCell className="text-sm">
-                                    {format(new Date(new Date(pageView.entryTime).getTime() + (5.5 * 60 * 60 * 1000)), "HH:mm:ss")} IST
+                                    {format(new Date(new Date(pageView.entryTime).getTime() - (4.5 * 60 * 60 * 1000)), "HH:mm:ss")} IST
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center gap-1">
