@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = (event?: BeforeUnloadEvent) => {
       console.log('📡 Browser/tab closing - sending session end signal');
       // Use sendBeacon for reliable logout on page unload
       const token = localStorage.getItem("token");
@@ -139,9 +139,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sessionToken
         });
         
+        // Send session end signal
         if (navigator.sendBeacon) {
-          navigator.sendBeacon("/api/auth/session-end", data);
+          const success = navigator.sendBeacon("/api/auth/session-end", data);
+          console.log(`📡 SendBeacon ${success ? 'succeeded' : 'failed'} for session termination`);
         }
+        
+        // Clear localStorage immediately to prevent auto-login on new tab
+        localStorage.removeItem("token");
+        localStorage.removeItem("sessionToken");
+        console.log('🧹 Cleared localStorage on window close');
       }
     };
 
@@ -151,7 +158,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store timeout reference to clear it if tab becomes visible again
         const timeoutId = setTimeout(() => {
           if (document.visibilityState === 'hidden') {
-            console.log('🚪 Tab/window still hidden after 15 minutes - logging out');
+            console.log('🚪 Tab/window still hidden after 15 minutes - terminating session');
+            // Send session end immediately and clear localStorage
+            handleBeforeUnload();
             autoLogout('browser_close');
           }
         }, 15 * 60 * 1000); // 15 minutes delay
