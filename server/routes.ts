@@ -829,19 +829,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ipAddress = getClientIP(req);
       const userAgent = req.get('User-Agent') || 'Unknown';
 
-      // Get or create session
+      // Get or create session - first check by token, then by active sessions for this user
       let session = await storage.getUserSessionByToken(sessionToken);
       if (!session) {
-        const browserInfo = parseBrowserInfo(userAgent);
-        session = await storage.createUserSession({
-          userId,
-          sessionToken,
-          ipAddress,
-          userAgent,
-          browserName: browserInfo.browserName,
-          deviceType: browserInfo.deviceType,
-          operatingSystem: browserInfo.operatingSystem,
-        });
+        // Check if there's already an active session for this user
+        const activeSessions = await storage.getActiveUserSessions(userId);
+        if (activeSessions.length > 0) {
+          // Reuse the most recent active session
+          session = activeSessions[0];
+          console.log(`🔄 Reusing existing active session ${session.id} for user ${userId}`);
+        } else {
+          // Create new session only if no active sessions exist
+          const browserInfo = parseBrowserInfo(userAgent);
+          session = await storage.createUserSession({
+            userId,
+            sessionToken,
+            ipAddress,
+            userAgent,
+            browserName: browserInfo.browserName,
+            deviceType: browserInfo.deviceType,
+            operatingSystem: browserInfo.operatingSystem,
+          });
+          console.log(`✨ Created new session ${session.id} for user ${userId}`);
+        }
+      } else {
+        console.log(`♻️ Found existing session ${session.id} for token ${sessionToken}`);
       }
 
       // Create page view record
