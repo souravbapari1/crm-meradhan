@@ -7,6 +7,7 @@ import { authMiddleware, requireRole } from "./middleware/auth";
 import { otpService } from "./services/otpService";
 import { emailService } from "./services/emailService";
 import jwt from "jsonwebtoken";
+import { toZonedTime } from 'date-fns-tz';
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
@@ -128,9 +129,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update last login
       await storage.updateUser(user.id, { lastLogin: new Date() });
 
-      // Generate JWT token
+      // Generate JWT token with session tracking
+      const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, email: user.email, role: user.role, sessionToken },
         JWT_SECRET,
         { expiresIn: "24h" }
       );
@@ -141,6 +143,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse browser info from user agent
       const browserInfo = parseBrowserInfo(userAgent);
+      
+      // Create new user session
+      await storage.createUserSession({
+        userId: user.id,
+        sessionToken,
+        startTime: new Date(),
+        ipAddress: clientIP,
+        userAgent,
+        browserName: browserInfo.browserName,
+        deviceType: browserInfo.deviceType,
+        operatingSystem: browserInfo.operatingSystem,
+        totalPages: 0
+      });
       
       await storage.createLoginLog(
         user.id, 
@@ -198,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const browserInfo = parseBrowserInfo(userAgent);
       
       // Extract user info from token if available
-      let userId, userEmail;
+      let userId, userEmail, decoded;
       let authToken = token; // Try token from body first (for sendBeacon)
       
       if (!authToken) {
@@ -211,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (authToken) {
         try {
-          const decoded = jwt.verify(authToken, JWT_SECRET) as any;
+          decoded = jwt.verify(authToken, JWT_SECRET) as any;
           userId = decoded.userId;
           userEmail = decoded.email;
         } catch (jwtError: any) {
@@ -254,6 +269,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           actionDescription = 'auto_logout_browser_close';
         } else if (reason === 'logout') {
           actionDescription = 'logout';
+        }
+        
+        // End the user session if we have a sessionToken
+        if (decoded?.sessionToken) {
+          const session = await storage.getUserSessionByToken(decoded.sessionToken);
+          if (session) {
+            await storage.endUserSession(session.id, reason || 'logout');
+          }
         }
         
         // Log to activity logs with detailed audit information
