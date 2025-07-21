@@ -195,11 +195,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionDuration: Date.now() - lastActivityRef.current
       };
       
-      // Try to log session end - include token in main request
+      // Try to log session end - include token and sessionToken in main request
       const token = localStorage.getItem("token");
+      const sessionToken = localStorage.getItem("sessionToken");
       api.post("/auth/session-end", {
         ...logData,
-        token
+        token,
+        sessionToken
       }).catch((error) => {
         // If regular API fails, try beacon as fallback
         console.log('Using beacon for logout tracking', error);
@@ -208,13 +210,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           headers.append('Content-Type', 'application/json');
           navigator.sendBeacon("/api/auth/session-end", JSON.stringify({
             ...logData,
-            token
+            token,
+            sessionToken
           }));
         }
       });
     }
     
     localStorage.removeItem("token");
+    localStorage.removeItem("sessionToken");
     setUser(null);
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);

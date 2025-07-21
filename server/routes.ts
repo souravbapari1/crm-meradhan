@@ -213,8 +213,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const browserInfo = parseBrowserInfo(userAgent);
       
       // Extract user info from token if available
-      let userId, userEmail, decoded;
+      let userId, userEmail, decoded, sessionTokenFromJWT;
       let authToken = token; // Try token from body first (for sendBeacon)
+      const { sessionToken: sessionTokenFromBody } = req.body;
       
       if (!authToken) {
         // Fallback to Authorization header
@@ -229,6 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           decoded = jwt.verify(authToken, JWT_SECRET) as any;
           userId = decoded.userId;
           userEmail = decoded.email;
+          sessionTokenFromJWT = decoded.sessionToken;
         } catch (jwtError: any) {
           // Token might be expired or invalid, but we still want to log the session end attempt
           console.log("Invalid token for session end:", jwtError.message);
@@ -272,11 +274,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // End the user session if we have a sessionToken
-        if (decoded?.sessionToken) {
-          const session = await storage.getUserSessionByToken(decoded.sessionToken);
+        const sessionTokenToUse = sessionTokenFromBody || sessionTokenFromJWT;
+        if (sessionTokenToUse) {
+          const session = await storage.getUserSessionByToken(sessionTokenToUse);
           if (session) {
             await storage.endUserSession(session.id, reason || 'logout');
+            console.log(`📋 Session ${session.id} ended for user ${userEmail} - Reason: ${reason || 'logout'}`);
+          } else {
+            console.log(`⚠️ Session not found for token: ${sessionTokenToUse}`);
           }
+        } else {
+          console.log(`⚠️ No session token available for session end`);
         }
         
         // Log to activity logs with detailed audit information

@@ -518,12 +518,8 @@ export class DatabaseStorage implements IStorage {
 
   // Session tracking methods
   async createUserSession(session: InsertUserSession): Promise<UserSession> {
-    // Convert to IST before storing
-    const istTime = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
-    const [newSession] = await db.insert(userSessions).values({
-      ...session,
-      startTime: istTime
-    }).returning();
+    // Use local server time (already in IST in Replit environment)
+    const [newSession] = await db.insert(userSessions).values(session).returning();
     return newSession;
   }
 
@@ -533,13 +529,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async endUserSession(sessionId: number, endReason: string): Promise<void> {
-    // Convert to IST before storing
-    const istEndTime = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
+    // Use local server time (already in IST in Replit environment)
+    const endTime = new Date();
     await db.update(userSessions)
       .set({ 
-        endTime: istEndTime,
+        endTime,
         endReason,
-        duration: sql`EXTRACT(EPOCH FROM (${istEndTime} - start_time))::integer`
+        duration: sql`EXTRACT(EPOCH FROM (${endTime} - start_time))::integer`
       })
       .where(eq(userSessions.id, sessionId));
   }
@@ -609,12 +605,8 @@ export class DatabaseStorage implements IStorage {
 
   // Page tracking methods
   async createPageView(pageView: InsertPageView): Promise<PageView> {
-    // Convert to IST before storing
-    const istTime = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
-    const [newPageView] = await db.insert(pageViews).values({
-      ...pageView,
-      entryTime: istTime
-    }).returning();
+    // Use local server time (already in IST in Replit environment)
+    const [newPageView] = await db.insert(pageViews).values(pageView).returning();
     
     // Update session total pages count
     await db.update(userSessions)
@@ -627,13 +619,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async endPageView(pageViewId: number, updates: { exitTime: Date; duration: number; scrollDepth: number; interactions: number }): Promise<void> {
-    // Convert exitTime to IST
-    const istExitTime = new Date(updates.exitTime.getTime() + (5.5 * 60 * 60 * 1000));
+    // Use local server time (already in IST in Replit environment)
     await db.update(pageViews)
-      .set({
-        ...updates,
-        exitTime: istExitTime
-      })
+      .set(updates)
       .where(eq(pageViews.id, pageViewId));
   }
 
