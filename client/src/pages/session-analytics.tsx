@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,9 +38,10 @@ export default function SessionAnalytics() {
   const [endDate, setEndDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [expandedSessions, setExpandedSessions] = useState<Record<number, boolean>>({});
+  const [refreshCounter, setRefreshCounter] = useState(0);
 
   const { data: sessions = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/session-analytics', startDate, endDate, selectedUserId],
+    queryKey: ['/api/session-analytics', startDate, endDate, selectedUserId, refreshCounter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
@@ -55,9 +56,19 @@ export default function SessionAnalytics() {
       if (!response.ok) throw new Error('Failed to fetch session analytics');
       return await response.json() as SessionData[];
     },
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
-    refetchOnWindowFocus: true, // Refresh when window becomes active
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
+
+  // Manual auto-refresh using useEffect and setInterval  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshCounter(prev => prev + 1);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Auto-expand the first session on load
   if (sessions.length > 0 && Object.keys(expandedSessions).length === 0) {
@@ -143,12 +154,12 @@ export default function SessionAnalytics() {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => refetch()}
+                    onClick={() => setRefreshCounter(prev => prev + 1)}
                   >
                     Refresh Now
                   </Button>
                   <div className="text-xs text-muted-foreground flex items-center">
-                    Updates every 5s
+                    Auto-refresh: 5s
                   </div>
                 </div>
               </div>
