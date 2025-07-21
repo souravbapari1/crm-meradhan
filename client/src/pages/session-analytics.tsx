@@ -1,15 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { format } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { useQuery } from "@tanstack/react-query";
+import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, Monitor, Smartphone, Tablet, Eye, MousePointer } from "lucide-react";
-import AppLayout from "@/components/layout/AppLayout";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Monitor, Smartphone, Tablet, Clock, Eye, MousePointer, ChevronDown, ChevronRight, User, Calendar, Timer, LogIn, LogOut } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { format } from "date-fns";
 
 interface SessionData {
   id: number;
@@ -38,6 +37,7 @@ export default function SessionAnalytics() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [expandedSessions, setExpandedSessions] = useState<Record<number, boolean>>({});
 
   const { data: sessions = [], isLoading } = useQuery({
     queryKey: ['/api/session-analytics', startDate, endDate, selectedUserId],
@@ -57,6 +57,11 @@ export default function SessionAnalytics() {
     },
   });
 
+  // Auto-expand the first session on load
+  if (sessions.length > 0 && Object.keys(expandedSessions).length === 0) {
+    setExpandedSessions({ [sessions[0].id]: true });
+  }
+
   const formatDuration = (seconds: number | null) => {
     if (!seconds) return "N/A";
     const mins = Math.floor(seconds / 60);
@@ -74,11 +79,18 @@ export default function SessionAnalytics() {
 
   const getEndReasonColor = (reason: string | null) => {
     switch (reason) {
-      case 'logout': return 'bg-green-100 text-green-800';
-      case 'timeout': return 'bg-yellow-100 text-yellow-800';
-      case 'browser_close': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'logout': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'timeout': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'browser_close': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200';
     }
+  };
+
+  const toggleSession = (sessionId: number) => {
+    setExpandedSessions(prev => ({
+      ...prev,
+      [sessionId]: !prev[sessionId]
+    }));
   };
 
   return (
@@ -123,148 +135,199 @@ export default function SessionAnalytics() {
                   onChange={(e) => setSelectedUserId(e.target.value)}
                 />
               </div>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setStartDate("");
-                  setEndDate("");
-                  setSelectedUserId("");
-                }}
-              >
-                Clear Filters
-              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Sessions Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>User Sessions</CardTitle>
-            <CardDescription>
-              Comprehensive session tracking with page navigation history
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="text-center py-6">Loading session data...</div>
-            ) : (
-              <div className="space-y-4">
-                {sessions.map((session) => (
-                  <div key={session.id} className="border rounded-lg p-4 space-y-3">
-                    {/* Session Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        {getDeviceIcon(session.deviceType)}
-                        <div>
-                          <div className="font-medium">{session.userName}</div>
-                          <div className="text-sm text-muted-foreground">{session.userEmail}</div>
+        {/* Session List with Toggle View */}
+        <div className="space-y-4">
+          {isLoading ? (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center">Loading sessions...</div>
+              </CardContent>
+            </Card>
+          ) : sessions.length === 0 ? (
+            <Card>
+              <CardContent className="py-8">
+                <div className="text-center text-muted-foreground">No sessions found</div>
+              </CardContent>
+            </Card>
+          ) : (
+            sessions.map((session) => (
+              <Card key={session.id} className="overflow-hidden">
+                <Collapsible 
+                  open={expandedSessions[session.id]} 
+                  onOpenChange={() => toggleSession(session.id)}
+                >
+                  <CollapsibleTrigger className="w-full">
+                    <CardHeader className="hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            {expandedSessions[session.id] ? 
+                              <ChevronDown className="h-4 w-4" /> : 
+                              <ChevronRight className="h-4 w-4" />
+                            }
+                            <User className="h-5 w-5 text-blue-600" />
+                          </div>
+                          
+                          <div className="text-left">
+                            <div className="font-semibold">{session.userName}</div>
+                            <div className="text-sm text-muted-foreground">{session.userEmail}</div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm">
-                          {format(new Date(new Date(session.startTime).getTime() - (4.5 * 60 * 60 * 1000)), "MMM dd, yyyy HH:mm")} IST
-                        </div>
-                        {session.endReason && (
-                          <Badge className={getEndReasonColor(session.endReason)}>
-                            {session.endReason.replace('_', ' ').toUpperCase()}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
 
-                    {/* Session Stats */}
-                    <div className="grid grid-cols-4 gap-4 py-2 border-y">
-                      <div className="text-center">
-                        <div className="text-sm text-muted-foreground">Duration</div>
-                        <div className="font-medium">{formatDuration(session.duration)}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-sm text-muted-foreground">Pages Visited</div>
-                        <div className="font-medium">{session.totalPages}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-sm text-muted-foreground">Browser</div>
-                        <div className="font-medium">{session.browserName}</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-sm text-muted-foreground">Device</div>
-                        <div className="font-medium capitalize">{session.deviceType}</div>
-                      </div>
-                    </div>
+                        <div className="flex items-center gap-6 text-sm">
+                          {/* Login Time */}
+                          <div className="flex items-center gap-2">
+                            <LogIn className="h-4 w-4 text-green-600" />
+                            <div className="text-right">
+                              <div className="font-medium">Login</div>
+                              <div className="text-muted-foreground">
+                                {format(new Date(new Date(session.startTime).getTime() + (5.5 * 60 * 60 * 1000)), "MMM dd, HH:mm")} IST
+                              </div>
+                            </div>
+                          </div>
 
-                    {/* Page Views */}
-                    {session.pageViews && session.pageViews.length > 0 && (
-                      <div>
-                        <h4 className="font-medium mb-2 flex items-center gap-2">
-                          <Eye className="h-4 w-4" />
-                          Page Navigation History
-                        </h4>
-                        <div className="bg-muted/50 rounded-md p-3">
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Page</TableHead>
-                                <TableHead>Entry Time</TableHead>
-                                <TableHead>Duration</TableHead>
-                                <TableHead>Scroll %</TableHead>
-                                <TableHead>Interactions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {session.pageViews.map((pageView, index) => (
-                                <TableRow key={index}>
-                                  <TableCell>
-                                    <div>
-                                      <div className="font-medium">{pageView.pageTitle}</div>
-                                      <div className="text-sm text-muted-foreground">{pageView.pagePath}</div>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-sm">
-                                    {format(new Date(new Date(pageView.entryTime).getTime() - (4.5 * 60 * 60 * 1000)), "HH:mm:ss")} IST
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      {formatDuration(pageView.duration)}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1">
-                                      <div className="w-12 bg-gray-200 rounded-full h-2">
-                                        <div 
-                                          className="bg-blue-600 h-2 rounded-full" 
-                                          style={{ width: `${Math.min(pageView.scrollDepth, 100)}%` }}
-                                        ></div>
-                                      </div>
-                                      <span className="text-sm">{pageView.scrollDepth}%</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-1">
-                                      <MousePointer className="h-3 w-3" />
-                                      {pageView.interactions}
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
+                          {/* Logout Time */}
+                          <div className="flex items-center gap-2">
+                            <LogOut className="h-4 w-4 text-red-600" />
+                            <div className="text-right">
+                              <div className="font-medium">Logout</div>
+                              <div className="text-muted-foreground">
+                                {session.endTime ? 
+                                  format(new Date(new Date(session.endTime).getTime() + (5.5 * 60 * 60 * 1000)), "MMM dd, HH:mm") + " IST" :
+                                  "Active"
+                                }
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Duration */}
+                          <div className="flex items-center gap-2">
+                            <Timer className="h-4 w-4 text-purple-600" />
+                            <div className="text-right">
+                              <div className="font-medium">Duration</div>
+                              <div className="text-muted-foreground">
+                                {formatDuration(session.duration)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Device & Browser */}
+                          <div className="flex items-center gap-2">
+                            {getDeviceIcon(session.deviceType)}
+                            <div className="text-right">
+                              <div className="font-medium">Device</div>
+                              <div className="text-muted-foreground">
+                                {session.deviceType} - {session.browserName}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Pages Count */}
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-4 w-4 text-orange-600" />
+                            <div className="text-right">
+                              <div className="font-medium">Pages</div>
+                              <div className="text-muted-foreground">
+                                {session.totalPages} visited
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* End Reason */}
+                          {session.endReason && (
+                            <Badge className={getEndReasonColor(session.endReason)}>
+                              {session.endReason === 'logout' ? 'Manual Logout' :
+                               session.endReason === 'timeout' ? 'Auto Timeout' :
+                               session.endReason === 'browser_close' ? 'Browser Close' :
+                               session.endReason}
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                ))}
-                
-                {sessions.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No session data found for the selected criteria
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="border-t pt-4">
+                          <h4 className="font-semibold mb-3 flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Page Navigation History
+                          </h4>
+                          
+                          {session.pageViews && session.pageViews.length > 0 ? (
+                            <div className="rounded-md border">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Page</TableHead>
+                                    <TableHead>Entry Time</TableHead>
+                                    <TableHead>Exit Time</TableHead>
+                                    <TableHead>Duration</TableHead>
+                                    <TableHead>Scroll %</TableHead>
+                                    <TableHead>Interactions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {session.pageViews.map((pageView, index) => (
+                                    <TableRow key={index}>
+                                      <TableCell>
+                                        <div>
+                                          <div className="font-medium">{pageView.pageTitle}</div>
+                                          <div className="text-sm text-muted-foreground">{pageView.pagePath}</div>
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="text-sm">
+                                        {format(new Date(new Date(pageView.entryTime).getTime() + (5.5 * 60 * 60 * 1000)), "HH:mm:ss")} IST
+                                      </TableCell>
+                                      <TableCell className="text-sm">
+                                        {pageView.exitTime ? 
+                                          format(new Date(new Date(pageView.exitTime).getTime() + (5.5 * 60 * 60 * 1000)), "HH:mm:ss") + " IST" :
+                                          "Active"
+                                        }
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center gap-1">
+                                          <Clock className="h-3 w-3" />
+                                          {formatDuration(pageView.duration)}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center gap-1">
+                                          <Eye className="h-3 w-3" />
+                                          {pageView.scrollDepth}%
+                                        </div>
+                                      </TableCell>
+                                      <TableCell>
+                                        <div className="flex items-center gap-1">
+                                          <MousePointer className="h-3 w-3" />
+                                          {pageView.interactions}
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                              No page views recorded for this session
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </AppLayout>
   );
