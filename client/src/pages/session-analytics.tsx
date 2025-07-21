@@ -55,6 +55,7 @@ export default function SessionAnalytics() {
       if (!response.ok) throw new Error('Failed to fetch session analytics');
       return await response.json() as SessionData[];
     },
+    staleTime: 0, // Always consider data stale for session analytics
     refetchOnWindowFocus: true,
   });
 
@@ -141,9 +142,14 @@ export default function SessionAnalytics() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  onClick={() => refetch()}
+                  onClick={async () => {
+                    console.log('🔄 Manual refresh triggered');
+                    await refetch();
+                    console.log('✅ Manual refresh completed');
+                  }}
+                  disabled={isLoading}
                 >
-                  Refresh Sessions
+                  {isLoading ? 'Refreshing...' : 'Refresh Sessions'}
                 </Button>
               </div>
             </div>
