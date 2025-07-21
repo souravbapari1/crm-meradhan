@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from "react";
 import { api } from "@/lib/api";
 import { User } from "@/types";
 
@@ -13,9 +13,105 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Session timeout: 15 minutes (in milliseconds)
+const SESSION_TIMEOUT = 15 * 60 * 1000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
+
+  // Auto logout function
+  const autoLogout = useCallback((reason: 'timeout' | 'browser_close' = 'timeout') => {
+    if (user) {
+      // Log the session end
+      api.post("/auth/session-end", { reason }).catch(() => {});
+    }
+    localStorage.removeItem("token");
+    setUser(null);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, [user]);
+
+  // Reset inactivity timer
+  const resetTimer = useCallback(() => {
+    if (!user) return;
+    
+    lastActivityRef.current = Date.now();
+    
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    timeoutRef.current = setTimeout(() => {
+      autoLogout('timeout');
+    }, SESSION_TIMEOUT);
+  }, [user, autoLogout]);
+
+  // Activity event listeners
+  useEffect(() => {
+    if (!user) return;
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    const handleActivity = () => {
+      resetTimer();
+    };
+
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+
+    // Start the timer
+    resetTimer();
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [user, resetTimer]);
+
+  // Browser/tab close detection
+  useEffect(() => {
+    if (!user) return;
+
+    const handleBeforeUnload = () => {
+      // Use sendBeacon for reliable logout on page unload
+      if (navigator.sendBeacon) {
+        const token = localStorage.getItem("token");
+        if (token) {
+          const data = JSON.stringify({ reason: 'browser_close' });
+          navigator.sendBeacon("/api/auth/session-end", data);
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        // Schedule a logout if the page stays hidden for too long
+        setTimeout(() => {
+          if (document.visibilityState === 'hidden') {
+            autoLogout('browser_close');
+          }
+        }, 5000); // 5 seconds delay to avoid false positives
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, autoLogout]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -46,12 +142,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     localStorage.setItem("token", token);
     setUser(userData);
+    
+    // Start session management
+    resetTimer();
   };
 
   const logout = () => {
+    if (user) {
+      // Log manual logout
+      api.post("/auth/session-end", { reason: 'logout' }).catch(() => {});
+    }
     localStorage.removeItem("token");
     setUser(null);
-    api.post("/auth/logout").catch(() => {}); // Fire and forget
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
   };
 
   const hasRole = (roles: string[]): boolean => {

@@ -33,6 +33,10 @@ export const loginLogs = pgTable("login_logs", {
   email: text("email").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
+  browserName: text("browser_name"),
+  deviceType: text("device_type"), // desktop, mobile, tablet
+  operatingSystem: text("operating_system"),
+  sessionType: text("session_type").notNull().default("login"), // login, logout, timeout, browser_close
   success: boolean("success").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -318,6 +322,8 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type OTP = typeof otps.$inferSelect;
 export type LoginLog = typeof loginLogs.$inferSelect;
+export const insertLoginLogSchema = createInsertSchema(loginLogs).omit({ id: true, createdAt: true });
+export type InsertLoginLog = z.infer<typeof insertLoginLogSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type LeadFollowUp = typeof leadFollowUps.$inferSelect;
 export type InsertLeadFollowUp = z.infer<typeof insertLeadFollowUpSchema>;

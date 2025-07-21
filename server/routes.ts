@@ -20,6 +20,50 @@ function getClientIP(req: any): string {
          "unknown";
 }
 
+// Browser detection utility
+function parseBrowserInfo(userAgent: string) {
+  let browserName = 'Unknown';
+  let deviceType = 'desktop';
+  let operatingSystem = 'Unknown';
+
+  // Detect browser
+  if (userAgent.includes('Chrome') && !userAgent.includes('Edg')) {
+    browserName = 'Chrome';
+  } else if (userAgent.includes('Firefox')) {
+    browserName = 'Firefox';
+  } else if (userAgent.includes('Safari') && !userAgent.includes('Chrome')) {
+    browserName = 'Safari';
+  } else if (userAgent.includes('Edg')) {
+    browserName = 'Edge';
+  } else if (userAgent.includes('Opera') || userAgent.includes('OPR')) {
+    browserName = 'Opera';
+  }
+
+  // Detect device type
+  if (/Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)) {
+    if (/iPad|Tablet/i.test(userAgent)) {
+      deviceType = 'tablet';
+    } else {
+      deviceType = 'mobile';
+    }
+  }
+
+  // Detect operating system
+  if (userAgent.includes('Windows')) {
+    operatingSystem = 'Windows';
+  } else if (userAgent.includes('Mac')) {
+    operatingSystem = 'macOS';
+  } else if (userAgent.includes('Linux')) {
+    operatingSystem = 'Linux';
+  } else if (userAgent.includes('Android')) {
+    operatingSystem = 'Android';
+  } else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) {
+    operatingSystem = 'iOS';
+  }
+
+  return { browserName, deviceType, operatingSystem };
+}
+
 // Validation schemas
 const loginSchema = z.object({
   email: z.string().email(),
@@ -90,10 +134,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         { expiresIn: "24h" }
       );
 
-      // Log successful login
+      // Enhanced login logging with browser detection
       const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
-      await storage.createLoginLog(user.id, email, clientIP, userAgent, true);
+      
+      // Parse browser info from user agent
+      const browserInfo = parseBrowserInfo(userAgent);
+      
+      await storage.createLoginLog(
+        user.id, 
+        email, 
+        clientIP, 
+        userAgent, 
+        browserInfo.browserName,
+        browserInfo.deviceType,
+        browserInfo.operatingSystem,
+        'login',
+        true
+      );
+      
+      // Log to activity logs as well
+      await storage.createActivityLog(
+        user.id,
+        'user',
+        user.id,
+        'login',
+        { 
+          browserName: browserInfo.browserName,
+          deviceType: browserInfo.deviceType,
+          operatingSystem: browserInfo.operatingSystem
+        },
+        clientIP,
+        userAgent
+      );
 
       res.json({
         message: "Login successful",
@@ -114,6 +187,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/logout", authMiddleware, async (req, res) => {
     // In a production app, you might want to maintain a token blacklist
     res.json({ message: "Logout successful" });
+  });
+
+  app.post("/api/auth/session-end", authMiddleware, async (req, res) => {
+    try {
+      const { reason } = req.body;
+      const user = (req as any).user;
+      const clientIP = getClientIP(req);
+      const userAgent = req.get("User-Agent") || "unknown";
+      const browserInfo = parseBrowserInfo(userAgent);
+      
+      // Log session end
+      await storage.createLoginLog(
+        user.userId,
+        user.email,
+        clientIP,
+        userAgent,
+        browserInfo.browserName,
+        browserInfo.deviceType,
+        browserInfo.operatingSystem,
+        reason || 'logout',
+        true
+      );
+      
+      // Log to activity logs
+      await storage.createActivityLog(
+        user.userId,
+        'user',
+        user.userId,
+        'session_end',
+        { 
+          reason,
+          browserName: browserInfo.browserName,
+          deviceType: browserInfo.deviceType,
+          operatingSystem: browserInfo.operatingSystem
+        },
+        clientIP,
+        userAgent
+      );
+      
+      res.json({ message: "Session ended" });
+    } catch (error) {
+      console.error("Session end error:", error);
+      res.status(500).json({ message: "Failed to end session" });
+    }
   });
 
   app.get("/api/auth/me", authMiddleware, async (req, res) => {
@@ -412,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ticketData = insertSupportTicketSchema.parse(req.body);
       // Generate ticket number
       const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-      const ticket = await storage.createSupportTicket({ ...ticketData, ticketNumber });
+      const ticket = await storage.createSupportTicket({ ...ticketData, ticketNumber } as any);
       
       // Log activity
       const clientIP = getClientIP(req);
@@ -597,6 +714,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get activity logs error:", error);
       res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+
+  // Login logs routes (admin only)
+  app.get("/api/login-logs", authMiddleware, requireRole(['admin']), async (req, res) => {
+    try {
+      const logs = await storage.getAllLoginLogs();
+      res.json(logs);
+    } catch (error) {
+      console.error("Get login logs error:", error);
+      res.status(500).json({ message: "Failed to fetch login logs" });
     }
   });
 

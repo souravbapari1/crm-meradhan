@@ -47,7 +47,8 @@ export interface IStorage {
   markOTPAsUsed(id: number): Promise<void>;
   
   // Login log methods
-  createLoginLog(userId: number | null, email: string, ipAddress: string, userAgent: string, success: boolean): Promise<LoginLog>;
+  createLoginLog(userId: number | null, email: string, ipAddress: string, userAgent: string, browserName?: string, deviceType?: string, operatingSystem?: string, sessionType?: string, success?: boolean): Promise<LoginLog>;
+  getAllLoginLogs(): Promise<LoginLog[]>;
   
   // Lead methods
   getAllLeads(): Promise<Lead[]>;
@@ -171,15 +172,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Login log methods
-  async createLoginLog(userId: number | null, email: string, ipAddress: string, userAgent: string, success: boolean): Promise<LoginLog> {
+  async createLoginLog(userId: number | null, email: string, ipAddress: string, userAgent: string, browserName?: string, deviceType?: string, operatingSystem?: string, sessionType: string = 'login', success: boolean = true): Promise<LoginLog> {
     const [loginLog] = await db.insert(loginLogs).values({
       userId,
       email,
       ipAddress,
       userAgent,
+      browserName,
+      deviceType,
+      operatingSystem,
+      sessionType,
       success,
     }).returning();
     return loginLog;
+  }
+
+  async getAllLoginLogs(): Promise<LoginLog[]> {
+    return await db.select().from(loginLogs).orderBy(desc(loginLogs.createdAt));
   }
 
   // Lead methods
