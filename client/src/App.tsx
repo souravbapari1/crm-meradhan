@@ -16,6 +16,7 @@ import SupportTickets from "./pages/support-tickets";
 import EmailTemplates from "./pages/email-templates";
 import Reports from "./pages/reports";
 import UserManagement from "./pages/user-management";
+import SessionTest from "./pages/session-test";
 import AuditLogs from "./pages/audit-logs";
 import NotFound from "@/pages/not-found";
 
@@ -72,6 +73,11 @@ function Router() {
       <Route path="/audit-logs">
         <ProtectedRoute allowedRoles={['admin']}>
           <AuditLogs />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/session-test">
+        <ProtectedRoute>
+          <SessionTest />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />

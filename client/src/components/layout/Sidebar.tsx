@@ -15,6 +15,7 @@ import {
   PieChart,
   Settings,
   History,
+  Timer,
   X,
 } from "lucide-react";
 
@@ -38,6 +39,7 @@ const mainNavItems = [
 const adminNavItems = [
   { name: "User Management", href: "/user-management", icon: Settings },
   { name: "Audit Logs", href: "/audit-logs", icon: History },
+  { name: "Session Test", href: "/session-test", icon: Timer },
 ];
 
 export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
