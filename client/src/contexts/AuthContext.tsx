@@ -121,15 +121,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         console.log('👁️ Tab/window hidden - starting logout timer');
-        // Schedule a logout if the page stays hidden for too long
-        setTimeout(() => {
+        // Store timeout reference to clear it if tab becomes visible again
+        const timeoutId = setTimeout(() => {
           if (document.visibilityState === 'hidden') {
             console.log('🚪 Tab/window still hidden after 5 seconds - logging out');
             autoLogout('browser_close');
           }
         }, 5000); // 5 seconds delay to avoid false positives
+        
+        // Store timeout ID for potential cleanup
+        (window as any).__visibilityTimeout = timeoutId;
       } else {
         console.log('👁️ Tab/window visible again');
+        // Clear timeout if tab becomes visible again
+        if ((window as any).__visibilityTimeout) {
+          clearTimeout((window as any).__visibilityTimeout);
+          delete (window as any).__visibilityTimeout;
+        }
       }
     };
 
