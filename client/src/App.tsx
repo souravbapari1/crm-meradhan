@@ -4,6 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./contexts/AuthContext";
+import { PageTrackingProvider } from "./contexts/PageTrackingContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import Login from "./pages/login";
@@ -18,6 +19,7 @@ import Reports from "./pages/reports";
 import UserManagement from "./pages/user-management";
 import SessionTest from "./pages/session-test";
 import AuditLogs from "./pages/audit-logs";
+import SessionAnalytics from "./pages/session-analytics";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -75,6 +77,11 @@ function Router() {
           <AuditLogs />
         </ProtectedRoute>
       </Route>
+      <Route path="/session-analytics">
+        <ProtectedRoute allowedRoles={['admin']}>
+          <SessionAnalytics />
+        </ProtectedRoute>
+      </Route>
       <Route path="/session-test">
         <ProtectedRoute>
           <SessionTest />
@@ -90,10 +97,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <PageTrackingProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </PageTrackingProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

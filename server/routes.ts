@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertLeadSchema, insertCustomerSchema, insertRfqSchema, insertSupportTicketSchema, insertEmailTemplateSchema, insertLeadFollowUpSchema } from "@shared/schema";
+import { insertLeadSchema, insertCustomerSchema, insertRfqSchema, insertSupportTicketSchema, insertEmailTemplateSchema, insertLeadFollowUpSchema, userSessions, pageViews, insertUserSessionSchema, insertPageViewSchema } from "@shared/schema";
 import { authMiddleware, requireRole } from "./middleware/auth";
 import { otpService } from "./services/otpService";
 import { emailService } from "./services/emailService";
@@ -769,6 +769,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get login logs error:", error);
       res.status(500).json({ message: "Failed to fetch login logs" });
+    }
+  });
+
+  // Page tracking routes
+  app.post("/api/page-tracking/start", authMiddleware, async (req: any, res) => {
+    try {
+      const { sessionToken, pagePath, pageTitle, referrer } = req.body;
+      const userId = req.user!.userId;
+      const ipAddress = getClientIP(req);
+      const userAgent = req.get('User-Agent') || 'Unknown';
+
+      // Get or create session
+      let session = await storage.getUserSessionByToken(sessionToken);
+      if (!session) {
+        const browserInfo = parseBrowserInfo(userAgent);
+        session = await storage.createUserSession({
+          userId,
+          sessionToken,
+          ipAddress,
+          userAgent,
+          browserName: browserInfo.browserName,
+          deviceType: browserInfo.deviceType,
+          operatingSystem: browserInfo.operatingSystem,
+        });
+      }
+
+      // Create page view record
+      const pageView = await storage.createPageView({
+        sessionId: session.id,
+        userId,
+        pagePath,
+        pageTitle,
+        referrer: referrer || null,
+      });
+
+      res.json({ pageViewId: pageView.id, sessionId: session.id });
+    } catch (error) {
+      console.error("Error starting page tracking:", error);
+      res.status(500).json({ message: "Failed to start page tracking" });
+    }
+  });
+
+  app.post("/api/page-tracking/end", async (req, res) => {
+    try {
+      let { pageViewId, exitTime, duration, scrollDepth, interactions, token } = req.body;
+
+      // Handle sendBeacon requests (from beforeunload)
+      if (!token && req.headers.authorization) {
+        token = req.headers.authorization.replace('Bearer ', '');
+      }
+
+      if (!token) {
+        return res.status(401).json({ message: "Access token required" });
+      }
+
+      // Verify token
+      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      if (!decoded) {
+        return res.status(401).json({ message: "Invalid token" });
+      }
+
+      await storage.endPageView(pageViewId, {
+        exitTime: new Date(exitTime),
+        duration,
+        scrollDepth: scrollDepth || 0,
+        interactions: interactions || 0,
+      });
+
+      res.json({ message: "Page tracking ended successfully" });
+    } catch (error) {
+      console.error("Error ending page tracking:", error);
+      res.status(500).json({ message: "Failed to end page tracking" });
+    }
+  });
+
+  // Get session analytics
+  app.get("/api/session-analytics", authMiddleware, requireRole(['admin']), async (req, res) => {
+    try {
+      const { startDate, endDate, userId } = req.query;
+      const sessions = await storage.getSessionAnalytics({
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        userId: userId ? parseInt(userId as string) : undefined,
+      });
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching session analytics:", error);
+      res.status(500).json({ message: "Failed to fetch session analytics" });
     }
   });
 

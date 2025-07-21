@@ -15,6 +15,7 @@ import {
   PieChart,
   Settings,
   History,
+  Activity,
   Timer,
   X,
 } from "lucide-react";
@@ -39,6 +40,7 @@ const mainNavItems = [
 const adminNavItems = [
   { name: "User Management", href: "/user-management", icon: Settings },
   { name: "Audit Logs", href: "/audit-logs", icon: History },
+  { name: "Session Analytics", href: "/session-analytics", icon: Activity },
   { name: "Session Test", href: "/session-test", icon: Timer },
 ];
 

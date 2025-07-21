@@ -160,6 +160,40 @@ export const activityLogs = pgTable("activity_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// User sessions table for detailed session tracking
+export const userSessions = pgTable("user_sessions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  sessionToken: text("session_token").notNull(),
+  startTime: timestamp("start_time").defaultNow().notNull(),
+  endTime: timestamp("end_time"),
+  duration: integer("duration"), // in seconds
+  totalPages: integer("total_pages").default(0),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  browserName: text("browser_name"),
+  deviceType: text("device_type"),
+  operatingSystem: text("operating_system"),
+  endReason: text("end_reason"), // logout, timeout, browser_close
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Page views table for tracking page browsing history
+export const pageViews = pgTable("page_views", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => userSessions.id).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  pagePath: text("page_path").notNull(),
+  pageTitle: text("page_title"),
+  entryTime: timestamp("entry_time").defaultNow().notNull(),
+  exitTime: timestamp("exit_time"),
+  duration: integer("duration"), // in seconds
+  scrollDepth: integer("scroll_depth"), // percentage
+  interactions: integer("interactions").default(0), // clicks, form submissions, etc.
+  referrer: text("referrer"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   assignedLeads: many(leads),
@@ -170,6 +204,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   activityLogs: many(activityLogs),
   loginLogs: many(loginLogs),
   leadFollowUps: many(leadFollowUps),
+  userSessions: many(userSessions),
+  pageViews: many(pageViews),
 }));
 
 export const leadsRelations = relations(leads, ({ one, many }) => ({
@@ -256,6 +292,25 @@ export const loginLogsRelations = relations(loginLogs, ({ one }) => ({
   }),
 }));
 
+export const userSessionsRelations = relations(userSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [userSessions.userId],
+    references: [users.id],
+  }),
+  pageViews: many(pageViews),
+}));
+
+export const pageViewsRelations = relations(pageViews, ({ one }) => ({
+  session: one(userSessions, {
+    fields: [pageViews.sessionId],
+    references: [userSessions.id],
+  }),
+  user: one(users, {
+    fields: [pageViews.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -305,6 +360,16 @@ export const insertLeadFollowUpSchema = createInsertSchema(leadFollowUps).omit({
   createdAt: true,
 });
 
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPageViewSchema = createInsertSchema(pageViews).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -327,3 +392,7 @@ export type InsertLoginLog = z.infer<typeof insertLoginLogSchema>;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type LeadFollowUp = typeof leadFollowUps.$inferSelect;
 export type InsertLeadFollowUp = z.infer<typeof insertLeadFollowUpSchema>;
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+export type PageView = typeof pageViews.$inferSelect;
+export type InsertPageView = z.infer<typeof insertPageViewSchema>;

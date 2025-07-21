@@ -10,6 +10,8 @@ import {
   loginLogs, 
   activityLogs,
   leadFollowUps,
+  userSessions,
+  pageViews,
   type User, 
   type InsertUser,
   type Lead,
@@ -28,7 +30,11 @@ import {
   type LoginLog,
   type ActivityLog,
   type LeadFollowUp,
-  type InsertLeadFollowUp
+  type InsertLeadFollowUp,
+  type UserSession,
+  type InsertUserSession,
+  type PageView,
+  type InsertPageView
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, asc, like, sql, count } from "drizzle-orm";
@@ -98,6 +104,16 @@ export interface IStorage {
   // Activity log methods
   createActivityLog(userId: number, entityType: string, entityId: number, action: string, details: any, ipAddress: string, userAgent: string): Promise<ActivityLog>;
   getActivityLogs(limit?: number): Promise<ActivityLog[]>;
+  
+  // Session tracking methods
+  createUserSession(session: InsertUserSession): Promise<UserSession>;
+  getUserSessionByToken(sessionToken: string): Promise<UserSession | undefined>;
+  endUserSession(sessionId: number, endReason: string): Promise<void>;
+  getSessionAnalytics(params: { startDate?: Date; endDate?: Date; userId?: number }): Promise<any[]>;
+  
+  // Page tracking methods
+  createPageView(pageView: InsertPageView): Promise<PageView>;
+  endPageView(pageViewId: number, updates: { exitTime: Date; duration: number; scrollDepth: number; interactions: number }): Promise<void>;
   
   // Dashboard/Analytics methods
   getDashboardKPIs(): Promise<{
@@ -328,7 +344,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSupportTicket(ticket: InsertSupportTicket): Promise<SupportTicket> {
-    const [newTicket] = await db.insert(supportTickets).values(ticket).returning();
+    // Generate unique ticket number
+    const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+    const [newTicket] = await db.insert(supportTickets).values({
+      ...ticket,
+      ticketNumber,
+      updatedAt: new Date(),
+    }).returning();
     return newTicket;
   }
 
@@ -492,6 +514,100 @@ export class DatabaseStorage implements IStorage {
     .leftJoin(users, eq(activityLogs.userId, users.id))
     .orderBy(desc(activityLogs.createdAt))
     .limit(limit);
+  }
+
+  // Session tracking methods
+  async createUserSession(session: InsertUserSession): Promise<UserSession> {
+    const [newSession] = await db.insert(userSessions).values(session).returning();
+    return newSession;
+  }
+
+  async getUserSessionByToken(sessionToken: string): Promise<UserSession | undefined> {
+    const [session] = await db.select().from(userSessions).where(eq(userSessions.sessionToken, sessionToken));
+    return session || undefined;
+  }
+
+  async endUserSession(sessionId: number, endReason: string): Promise<void> {
+    const endTime = new Date();
+    await db.update(userSessions)
+      .set({ 
+        endTime,
+        endReason,
+        duration: sql`EXTRACT(EPOCH FROM (${endTime} - start_time))::integer`
+      })
+      .where(eq(userSessions.id, sessionId));
+  }
+
+  async getSessionAnalytics(params: { startDate?: Date; endDate?: Date; userId?: number }): Promise<any[]> {
+    let conditions: any[] = [];
+    
+    if (params.startDate) {
+      conditions.push(sql`${userSessions.startTime} >= ${params.startDate}`);
+    }
+    if (params.endDate) {
+      conditions.push(sql`${userSessions.startTime} <= ${params.endDate}`);
+    }
+    if (params.userId) {
+      conditions.push(eq(userSessions.userId, params.userId));
+    }
+
+    const query = db.select({
+      id: userSessions.id,
+      userId: userSessions.userId,
+      userName: users.name,
+      userEmail: users.email,
+      startTime: userSessions.startTime,
+      endTime: userSessions.endTime,
+      duration: userSessions.duration,
+      totalPages: userSessions.totalPages,
+      browserName: userSessions.browserName,
+      deviceType: userSessions.deviceType,
+      endReason: userSessions.endReason,
+      pageViews: sql`json_agg(json_build_object(
+        'pagePath', ${pageViews.pagePath},
+        'pageTitle', ${pageViews.pageTitle},
+        'entryTime', ${pageViews.entryTime},
+        'exitTime', ${pageViews.exitTime},
+        'duration', ${pageViews.duration},
+        'scrollDepth', ${pageViews.scrollDepth},
+        'interactions', ${pageViews.interactions}
+      ) ORDER BY ${pageViews.entryTime}) FILTER (WHERE ${pageViews.id} IS NOT NULL)`
+    })
+    .from(userSessions)
+    .leftJoin(users, eq(userSessions.userId, users.id))
+    .leftJoin(pageViews, eq(userSessions.id, pageViews.sessionId))
+    .$dynamic();
+
+    if (conditions.length > 0) {
+      return await query
+        .where(and(...conditions))
+        .groupBy(userSessions.id, users.name, users.email)
+        .orderBy(desc(userSessions.startTime));
+    } else {
+      return await query
+        .groupBy(userSessions.id, users.name, users.email)
+        .orderBy(desc(userSessions.startTime));
+    }
+  }
+
+  // Page tracking methods
+  async createPageView(pageView: InsertPageView): Promise<PageView> {
+    const [newPageView] = await db.insert(pageViews).values(pageView).returning();
+    
+    // Update session total pages count
+    await db.update(userSessions)
+      .set({ 
+        totalPages: sql`${userSessions.totalPages} + 1`
+      })
+      .where(eq(userSessions.id, newPageView.sessionId));
+      
+    return newPageView;
+  }
+
+  async endPageView(pageViewId: number, updates: { exitTime: Date; duration: number; scrollDepth: number; interactions: number }): Promise<void> {
+    await db.update(pageViews)
+      .set(updates)
+      .where(eq(pageViews.id, pageViewId));
   }
 }
 
