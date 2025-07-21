@@ -47,7 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       
       // Try to log session end - use both regular API call and beacon for reliability
-      api.post("/auth/session-end", logData).catch(() => {
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      api.post("/auth/session-end", logData, config).catch(() => {
         // If regular API fails, try beacon as fallback
         if (navigator.sendBeacon) {
           navigator.sendBeacon("/api/auth/session-end", JSON.stringify(logData));
@@ -227,20 +234,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Try to log session end - include token and sessionToken in main request
+      // Try to log session end - use Authorization header AND body for reliability
+      const config = {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      };
+      
       api.post("/auth/session-end", {
         ...logData,
         token,
         sessionToken
-      }).catch((error) => {
+      }, config).catch((error) => {
         // If regular API fails, try beacon as fallback
         console.log('Using beacon for logout tracking', error);
         if (navigator.sendBeacon) {
-          navigator.sendBeacon("/api/auth/session-end", JSON.stringify({
+          const beaconData = JSON.stringify({
             ...logData,
             token,
             sessionToken
-          }));
+          });
+          navigator.sendBeacon("/api/auth/session-end", beaconData);
         }
       });
     }

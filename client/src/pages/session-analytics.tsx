@@ -39,7 +39,7 @@ export default function SessionAnalytics() {
   const [selectedUserId, setSelectedUserId] = useState("");
   const [expandedSessions, setExpandedSessions] = useState<Record<number, boolean>>({});
 
-  const { data: sessions = [], isLoading } = useQuery({
+  const { data: sessions = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/session-analytics', startDate, endDate, selectedUserId],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -55,6 +55,8 @@ export default function SessionAnalytics() {
       if (!response.ok) throw new Error('Failed to fetch session analytics');
       return await response.json() as SessionData[];
     },
+    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchOnWindowFocus: true, // Refresh when window becomes active
   });
 
   // Auto-expand the first session on load
@@ -134,6 +136,21 @@ export default function SessionAnalytics() {
                   value={selectedUserId}
                   onChange={(e) => setSelectedUserId(e.target.value)}
                 />
+              </div>
+              <div className="grid gap-2">
+                <label className="text-sm font-medium">Auto-refresh</label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => refetch()}
+                  >
+                    Refresh Now
+                  </Button>
+                  <div className="text-xs text-muted-foreground flex items-center">
+                    Updates every 5s
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

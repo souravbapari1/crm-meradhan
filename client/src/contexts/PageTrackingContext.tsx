@@ -58,12 +58,17 @@ export const PageTrackingProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const interactionsRef = useRef(0);
   const visibilityTimeRef = useRef<number>(Date.now());
 
-  // Initialize session tracking - create new session token on each login
+  // Initialize session tracking - reuse existing session token or create new one only on first login
   useEffect(() => {
     if (user) {
-      // Always create a new session token on login, don't reuse existing ones
-      const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('sessionToken', sessionToken);
+      // Check if we already have a session token from current login
+      let sessionToken = sessionIdRef.current || localStorage.getItem('sessionToken');
+      
+      // Only create new session token if we don't have one (first time login)
+      if (!sessionToken) {
+        sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem('sessionToken', sessionToken);
+      }
       sessionIdRef.current = sessionToken;
     } else {
       // Clear session token on logout
