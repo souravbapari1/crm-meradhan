@@ -247,11 +247,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userAgent
         };
         
-        let actionDescription = 'session_end';
+        let actionDescription = 'logout';
         if (reason === 'timeout') {
           actionDescription = 'auto_logout_timeout';
         } else if (reason === 'browser_close') {
           actionDescription = 'auto_logout_browser_close';
+        } else if (reason === 'logout') {
+          actionDescription = 'logout';
         }
         
         // Log to activity logs with detailed audit information

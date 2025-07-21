@@ -232,7 +232,7 @@ export default function AuditLogs() {
                     filteredLogs.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell className="font-medium">
-                          {format(new Date(log.createdAt), "MMM dd, yyyy HH:mm")}
+                          {format(new Date(new Date(log.createdAt).getTime() + (5.5 * 60 * 60 * 1000)), "MMM dd, yyyy HH:mm")} IST
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -253,7 +253,7 @@ export default function AuditLogs() {
                               <div className="space-y-1">
                                 <div>Reason: {log.details.reason}</div>
                                 {log.details.timestamp && (
-                                  <div>Time: {format(new Date(log.details.timestamp), "HH:mm:ss")}</div>
+                                  <div>Time: {format(new Date(new Date(log.details.timestamp).getTime() + (5.5 * 60 * 60 * 1000)), "HH:mm:ss")} IST</div>
                                 )}
                                 {log.details.sessionDuration && (
                                   <div>Duration: {Math.floor(log.details.sessionDuration / 1000 / 60)}m {Math.floor((log.details.sessionDuration / 1000) % 60)}s</div>
@@ -315,7 +315,7 @@ export default function AuditLogs() {
                     loginLogs.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell className="font-medium">
-                          {format(new Date(log.createdAt), "MMM dd, yyyy HH:mm:ss")}
+                          {format(new Date(new Date(log.createdAt).getTime() + (5.5 * 60 * 60 * 1000)), "MMM dd, yyyy HH:mm:ss")} IST
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
