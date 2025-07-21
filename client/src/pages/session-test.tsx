@@ -1,71 +1,50 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import AppLayout from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Timer, Monitor, Eye, EyeOff, LogOut, AlertTriangle } from "lucide-react";
-import AppLayout from "@/components/layout/AppLayout";
-import { useAuth } from "@/hooks/use-auth";
+import { Timer, LogOut, X, Eye, EyeOff } from "lucide-react";
 
 export default function SessionTest() {
-  const { logout, user } = useAuth();
-  const [inactivityTime, setInactivityTime] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
-  const [sessionEvents, setSessionEvents] = useState<string[]>([]);
+  const { user, logout } = useAuth();
+  const [sessionInfo, setSessionInfo] = useState<any>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(15 * 60); // 15 minutes in seconds
+  const [isTabHidden, setIsTabHidden] = useState(false);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (user) {
-      interval = setInterval(() => {
-        setInactivityTime(prev => prev + 1);
-      }, 1000);
-
-      // Listen for user activity
-      const handleActivity = () => {
-        setInactivityTime(0);
-        addEvent('User activity detected - timer reset');
-      };
-
-      const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-      events.forEach(event => {
-        document.addEventListener(event, handleActivity, true);
-      });
-
-      // Listen for visibility changes
-      const handleVisibilityChange = () => {
-        if (document.visibilityState === 'hidden') {
-          setIsVisible(false);
-          addEvent('Tab/window hidden - logout timer started (5 seconds)');
-        } else {
-          setIsVisible(true);
-          addEvent('Tab/window visible again');
-        }
-      };
-
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-
-      // Listen for beforeunload
-      const handleBeforeUnload = () => {
-        addEvent('Browser/tab closing detected');
-      };
-
-      window.addEventListener('beforeunload', handleBeforeUnload);
-
-      return () => {
-        clearInterval(interval);
-        events.forEach(event => {
-          document.removeEventListener(event, handleActivity, true);
+    // Get current session info
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setSessionInfo({
+          userId: payload.userId,
+          email: payload.email,
+          sessionToken: payload.sessionToken,
+          exp: new Date(payload.exp * 1000).toLocaleString()
         });
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-        window.removeEventListener('beforeunload', handleBeforeUnload);
-      };
+      } catch (e) {
+        console.log('Could not parse token');
+      }
     }
-  }, [user]);
 
-  const addEvent = (event: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setSessionEvents(prev => [`[${timestamp}] ${event}`, ...prev.slice(0, 9)]);
-  };
+    // Update countdown timer
+    const interval = setInterval(() => {
+      setTimeLeft(prev => Math.max(0, prev - 1));
+    }, 1000);
+
+    // Track visibility changes
+    const handleVisibilityChange = () => {
+      setIsTabHidden(document.visibilityState === 'hidden');
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -73,219 +52,185 @@ export default function SessionTest() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getInactivityStatus = () => {
-    if (inactivityTime < 300) return { color: "bg-green-100 text-green-800", text: "Active" };
-    if (inactivityTime < 600) return { color: "bg-yellow-100 text-yellow-800", text: "Idle" };
-    if (inactivityTime < 900) return { color: "bg-orange-100 text-orange-800", text: "Warning" };
-    return { color: "bg-red-100 text-red-800", text: "Critical" };
+  const testManualLogout = () => {
+    console.log('🧪 Testing Manual Logout...');
+    logout();
   };
 
-  const testTabClose = () => {
-    addEvent('Simulating tab close test...');
-    // This will trigger the visibility change handler
-    Object.defineProperty(document, 'visibilityState', {
-      writable: true,
-      value: 'hidden'
-    });
-    document.dispatchEvent(new Event('visibilitychange'));
-    
-    setTimeout(() => {
-      Object.defineProperty(document, 'visibilityState', {
-        writable: true,
-        value: 'visible'
-      });
-      document.dispatchEvent(new Event('visibilitychange'));
-    }, 6000); // Show visible again after 6 seconds
+  const testBrowserClose = () => {
+    console.log('🧪 Testing Browser Close...');
+    // Simulate beforeunload event
+    window.dispatchEvent(new Event('beforeunload'));
+    window.close();
   };
 
-  if (!user) {
-    return (
-      <AppLayout>
-        <div className="p-6">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <AlertTriangle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Please Login First</h2>
-              <p className="text-muted-foreground">You need to be logged in to test session management.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
-    );
-  }
+  const testTabHide = () => {
+    console.log('🧪 Testing Tab Hide (switch to another tab for 15+ minutes)');
+    alert('Switch to another tab for 15+ minutes to test tab hide timeout. Check console for logs.');
+  };
 
-  const status = getInactivityStatus();
+  const resetTimer = () => {
+    console.log('🔄 Simulating user activity to reset timer');
+    document.dispatchEvent(new Event('mousemove'));
+    setTimeLeft(15 * 60);
+  };
 
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Session Management Test</h1>
-          <p className="text-muted-foreground">Test automatic session termination functionality</p>
+          <h1 className="text-3xl font-bold">Session Logout Testing</h1>
+          <p className="text-muted-foreground mt-2">
+            Test all logout scenarios and session management
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Inactivity Timer */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Timer className="h-5 w-5" />
-                Inactivity Timer
-              </CardTitle>
-              <CardDescription>
-                Session will terminate after 15 minutes (900 seconds) of inactivity
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center space-y-4">
-                <div className="text-4xl font-mono font-bold">
-                  {formatTime(inactivityTime)}
-                </div>
-                <Badge className={status.color}>
-                  {status.text}
-                </Badge>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: `${Math.min((inactivityTime / 900) * 100, 100)}%` }}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Auto-logout at: {formatTime(900)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tab Visibility */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {isVisible ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
-                Tab Visibility
-              </CardTitle>
-              <CardDescription>
-                Session ends 5 seconds after tab becomes hidden
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center space-y-4">
-                <Badge variant={isVisible ? "default" : "destructive"}>
-                  {isVisible ? "Visible" : "Hidden"}
-                </Badge>
-                <Button 
-                  onClick={testTabClose}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Test Tab Close
-                </Button>
-                <p className="text-sm text-muted-foreground">
-                  Try switching tabs or minimizing the window
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Manual Logout */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LogOut className="h-5 w-5" />
-                Manual Actions
-              </CardTitle>
-              <CardDescription>
-                Test manual session termination
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Button 
-                  onClick={logout}
-                  variant="destructive"
-                  className="w-full"
-                >
-                  Manual Logout
-                </Button>
-                <Button 
-                  onClick={() => window.close()}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Close Browser Tab
-                </Button>
-                <p className="text-sm text-muted-foreground">
-                  These actions will trigger session end logging
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Event Log */}
+        {/* Current Session Info */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Monitor className="h-5 w-5" />
-              Session Events Log
+              <Timer className="h-5 w-5" />
+              Current Session Info
             </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {sessionInfo ? (
+              <div className="space-y-2">
+                <p><strong>User ID:</strong> {sessionInfo.userId}</p>
+                <p><strong>Email:</strong> {sessionInfo.email}</p>
+                <p><strong>Session Token:</strong> <code className="text-sm bg-muted px-2 py-1 rounded">{sessionInfo.sessionToken}</code></p>
+                <p><strong>Token Expires:</strong> {sessionInfo.exp}</p>
+                <div className="flex items-center gap-2">
+                  <strong>Tab Status:</strong>
+                  {isTabHidden ? (
+                    <Badge variant="secondary" className="flex items-center gap-1">
+                      <EyeOff className="h-3 w-3" />
+                      Hidden
+                    </Badge>
+                  ) : (
+                    <Badge variant="default" className="flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      Visible
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <p>No session info available</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Inactivity Timer */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Inactivity Timer</CardTitle>
             <CardDescription>
-              Real-time tracking of session management events
+              Time until automatic logout due to inactivity
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {sessionEvents.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  No events yet. Interact with the page to see activity tracking.
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-mono">{formatTime(timeLeft)}</div>
+                <p className="text-sm text-muted-foreground">
+                  {timeLeft === 0 ? 'Session should timeout now!' : 'Time remaining'}
                 </p>
-              ) : (
-                sessionEvents.map((event, index) => (
-                  <div 
-                    key={index} 
-                    className="text-sm p-2 bg-muted rounded font-mono"
-                  >
-                    {event}
-                  </div>
-                ))
-              )}
+              </div>
+              <Button onClick={resetTimer} variant="outline">
+                Reset Timer (Simulate Activity)
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Test Instructions */}
+        {/* Logout Tests */}
         <Card>
           <CardHeader>
-            <CardTitle>Testing Instructions</CardTitle>
+            <CardTitle>Logout Scenario Tests</CardTitle>
+            <CardDescription>
+              Test different logout mechanisms and verify proper session ending
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button 
+                onClick={testManualLogout}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Test Manual Logout
+              </Button>
+              
+              <Button 
+                onClick={testBrowserClose}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <X className="h-4 w-4" />
+                Test Browser Close
+              </Button>
+              
+              <Button 
+                onClick={testTabHide}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <EyeOff className="h-4 w-4" />
+                Test Tab Hide Timeout
+              </Button>
+              
+              <Button 
+                onClick={() => window.location.reload()}
+                variant="secondary"
+                className="flex items-center gap-2"
+              >
+                🔄 Test Page Refresh (No New Session)
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Instructions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Test Instructions</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
-                <h4 className="font-semibold mb-2">To test tab close detection:</h4>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                  <li>Open the browser's developer console (F12) to see detailed logs</li>
-                  <li>Switch to another tab or minimize the window</li>
-                  <li>Wait 5 seconds while the tab remains hidden</li>
-                  <li>Check the Session Management tab in Audit Logs for the session end record</li>
-                </ol>
+                <h4 className="font-semibold">1. Manual Logout Test</h4>
+                <p className="text-sm text-muted-foreground">
+                  Click "Test Manual Logout" and verify session ends with reason 'logout' in Session Analytics
+                </p>
               </div>
               
               <div>
-                <h4 className="font-semibold mb-2">To test browser close detection:</h4>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                  <li>Click the "Close Browser Tab" button or use Ctrl+W</li>
-                  <li>The beforeunload event will trigger session end logging</li>
-                  <li>Check the audit logs after logging back in</li>
-                </ol>
+                <h4 className="font-semibold">2. Inactivity Timeout Test</h4>
+                <p className="text-sm text-muted-foreground">
+                  Don't interact with the page for 15 minutes. Watch the timer count down and verify automatic logout.
+                </p>
               </div>
-
+              
               <div>
-                <h4 className="font-semibold mb-2">To test inactivity timeout:</h4>
-                <ol className="list-decimal list-inside space-y-1 text-sm text-muted-foreground">
-                  <li>Stop all mouse movement and keyboard activity</li>
-                  <li>Watch the inactivity timer count up to 15 minutes (900 seconds)</li>
-                  <li>The session will automatically terminate and redirect to login</li>
-                </ol>
+                <h4 className="font-semibold">3. Browser Close Test</h4>
+                <p className="text-sm text-muted-foreground">
+                  Click "Test Browser Close" to simulate closing the browser. Check Session Analytics after reopening.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold">4. Tab Hide Test</h4>
+                <p className="text-sm text-muted-foreground">
+                  Switch to another tab for 15+ minutes. Return to verify session ended with 'browser_close' reason.
+                </p>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold">5. Page Refresh Test</h4>
+                <p className="text-sm text-muted-foreground">
+                  Refresh the page multiple times. Verify the same session is maintained (no duplicates created).
+                </p>
               </div>
             </div>
           </CardContent>
