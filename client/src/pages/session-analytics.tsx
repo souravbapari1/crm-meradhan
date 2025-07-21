@@ -185,7 +185,7 @@ export default function SessionAnalytics() {
                             <div className="text-right">
                               <div className="font-medium">Login</div>
                               <div className="text-muted-foreground">
-                                {format(new Date(session.startTime.includes('Z') ? session.startTime : session.startTime + 'Z'), "MMM dd, HH:mm")} IST
+                                {format(new Date(session.startTime.replace('Z', '')), "MMM dd, HH:mm")} IST
                               </div>
                             </div>
                           </div>
@@ -197,7 +197,7 @@ export default function SessionAnalytics() {
                               <div className="font-medium">Logout</div>
                               <div className="text-muted-foreground">
                                 {session.endTime ? 
-                                  format(new Date(session.endTime.includes('Z') ? session.endTime : session.endTime + 'Z'), "MMM dd, HH:mm") + " IST" :
+                                  format(new Date(session.endTime.replace('Z', '')), "MMM dd, HH:mm") + " IST" :
                                   "Active"
                                 }
                               </div>
@@ -283,11 +283,11 @@ export default function SessionAnalytics() {
                                         </div>
                                       </TableCell>
                                       <TableCell className="text-sm">
-                                        {format(new Date(pageView.entryTime), "HH:mm:ss")} IST
+                                        {format(new Date(pageView.entryTime.replace('Z', '')), "HH:mm:ss")} IST
                                       </TableCell>
                                       <TableCell className="text-sm">
                                         {pageView.exitTime ? 
-                                          format(new Date(pageView.exitTime), "HH:mm:ss") + " IST" :
+                                          format(new Date(pageView.exitTime.replace('Z', '')), "HH:mm:ss") + " IST" :
                                           "Active"
                                         }
                                       </TableCell>
