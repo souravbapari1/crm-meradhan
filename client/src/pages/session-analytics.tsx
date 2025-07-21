@@ -38,10 +38,9 @@ export default function SessionAnalytics() {
   const [endDate, setEndDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
   const [expandedSessions, setExpandedSessions] = useState<Record<number, boolean>>({});
-  const [refreshCounter, setRefreshCounter] = useState(0);
 
   const { data: sessions = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/session-analytics', startDate, endDate, selectedUserId, refreshCounter],
+    queryKey: ['/api/session-analytics', startDate, endDate, selectedUserId],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (startDate) params.append('startDate', startDate);
@@ -56,19 +55,8 @@ export default function SessionAnalytics() {
       if (!response.ok) throw new Error('Failed to fetch session analytics');
       return await response.json() as SessionData[];
     },
-    staleTime: 0,
-    gcTime: 0,
     refetchOnWindowFocus: true,
   });
-
-  // Manual auto-refresh using useEffect and setInterval  
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRefreshCounter(prev => prev + 1);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, []);
 
   // Auto-expand the first session on load
   if (sessions.length > 0 && Object.keys(expandedSessions).length === 0) {
@@ -149,19 +137,14 @@ export default function SessionAnalytics() {
                 />
               </div>
               <div className="grid gap-2">
-                <label className="text-sm font-medium">Auto-refresh</label>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setRefreshCounter(prev => prev + 1)}
-                  >
-                    Refresh Now
-                  </Button>
-                  <div className="text-xs text-muted-foreground flex items-center">
-                    Auto-refresh: 5s
-                  </div>
-                </div>
+                <label className="text-sm font-medium">Refresh Data</label>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => refetch()}
+                >
+                  Refresh Sessions
+                </Button>
               </div>
             </div>
           </CardContent>
