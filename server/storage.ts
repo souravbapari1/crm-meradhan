@@ -189,6 +189,8 @@ export class DatabaseStorage implements IStorage {
 
   // Login log methods
   async createLoginLog(userId: number | null, email: string, ipAddress: string, userAgent: string, browserName?: string, deviceType?: string, operatingSystem?: string, sessionType: string = 'login', success: boolean = true): Promise<LoginLog> {
+    // Convert to IST (UTC+5:30) before storing
+    const istTime = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
     const [loginLog] = await db.insert(loginLogs).values({
       userId,
       email,
@@ -199,6 +201,7 @@ export class DatabaseStorage implements IStorage {
       operatingSystem,
       sessionType,
       success,
+      createdAt: istTime,
     }).returning();
     return loginLog;
   }
@@ -429,6 +432,8 @@ export class DatabaseStorage implements IStorage {
 
   // Activity log methods
   async createActivityLog(userId: number, entityType: string, entityId: number, action: string, details: any, ipAddress: string, userAgent: string): Promise<ActivityLog> {
+    // Convert to IST (UTC+5:30) before storing
+    const istTime = new Date(new Date().getTime() + (5.5 * 60 * 60 * 1000));
     const [activityLog] = await db.insert(activityLogs).values({
       userId,
       entityType,
@@ -437,6 +442,7 @@ export class DatabaseStorage implements IStorage {
       details,
       ipAddress,
       userAgent,
+      createdAt: istTime,
     }).returning();
     return activityLog;
   }

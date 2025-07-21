@@ -38,7 +38,7 @@ export const loginLogs = pgTable("login_logs", {
   operatingSystem: text("operating_system"),
   sessionType: text("session_type").notNull().default("login"), // login, logout, timeout, browser_close
   success: boolean("success").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });
 
 // Leads table
@@ -157,7 +157,7 @@ export const activityLogs = pgTable("activity_logs", {
   details: jsonb("details"),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });
 
 // User sessions table for detailed session tracking
