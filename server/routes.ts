@@ -207,7 +207,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/session-end", async (req, res) => {
     try {
-      const { reason, timestamp, sessionDuration, token } = req.body;
+      console.log('📥 Session end request received:', req.body);
+      console.log('📥 Request headers:', req.headers);
+      
+      const { reason, timestamp, sessionDuration, token, sessionToken: sessionTokenFromBody } = req.body;
       const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       const browserInfo = parseBrowserInfo(userAgent);
@@ -215,7 +218,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract user info from token if available
       let userId, userEmail, decoded, sessionTokenFromJWT;
       let authToken = token; // Try token from body first (for sendBeacon)
-      const { sessionToken: sessionTokenFromBody } = req.body;
       
       if (!authToken) {
         // Fallback to Authorization header

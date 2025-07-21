@@ -60,8 +60,38 @@ export default function SessionTest() {
   const testBrowserClose = () => {
     console.log('🧪 Testing Browser Close...');
     // Simulate beforeunload event
-    window.dispatchEvent(new Event('beforeunload'));
-    window.close();
+    const beforeUnloadEvent = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(beforeUnloadEvent);
+    
+    // Also test manual session end
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const data = JSON.stringify({ 
+          reason: 'manual_test_browser_close',
+          timestamp: new Date().toISOString(),
+          sessionDuration: 0,
+          token,
+          sessionToken: payload.sessionToken
+        });
+        
+        const blob = new Blob([data], { type: 'application/json' });
+        if (navigator.sendBeacon) {
+          const success = navigator.sendBeacon("/api/auth/session-end", blob);
+          console.log(`📡 Manual test sendBeacon ${success ? 'succeeded' : 'failed'}`);
+          console.log('📡 Test data sent:', JSON.parse(data));
+        }
+        
+        // Clear localStorage to simulate tab close
+        localStorage.removeItem("token");
+        localStorage.removeItem("sessionToken");
+        
+        alert('Session end signal sent! Check Session Analytics in a few seconds, then refresh this page.');
+      } catch (e) {
+        console.error('Error in test:', e);
+      }
+    }
   };
 
   const testTabHide = () => {

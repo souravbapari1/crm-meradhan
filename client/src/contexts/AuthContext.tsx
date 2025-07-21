@@ -139,10 +139,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           sessionToken
         });
         
-        // Send session end signal
+        // Send session end signal with proper Content-Type header
+        const blob = new Blob([data], { type: 'application/json' });
         if (navigator.sendBeacon) {
-          const success = navigator.sendBeacon("/api/auth/session-end", data);
+          const success = navigator.sendBeacon("/api/auth/session-end", blob);
           console.log(`📡 SendBeacon ${success ? 'succeeded' : 'failed'} for session termination`);
+          console.log(`📡 Sent data:`, JSON.parse(data));
         }
         
         // Clear localStorage immediately to prevent auto-login on new tab
