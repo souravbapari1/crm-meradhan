@@ -32,7 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const logData = {
         reason,
         timestamp: new Date().toISOString(),
-        sessionDuration: Date.now() - lastActivityRef.current
+        sessionDuration: Date.now() - lastActivityRef.current,
+        token // Include token for sendBeacon fallback
       };
       
       // Try to log session end - use both regular API call and beacon for reliability
@@ -107,7 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = JSON.stringify({ 
           reason: 'browser_close',
           timestamp: new Date().toISOString(),
-          sessionDuration: Date.now() - lastActivityRef.current
+          sessionDuration: Date.now() - lastActivityRef.current,
+          token // Include token in body since sendBeacon doesn't send custom headers
         });
         
         if (navigator.sendBeacon) {

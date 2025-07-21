@@ -192,18 +192,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/session-end", async (req, res) => {
     try {
-      const { reason, timestamp, sessionDuration } = req.body;
+      const { reason, timestamp, sessionDuration, token } = req.body;
       const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       const browserInfo = parseBrowserInfo(userAgent);
       
       // Extract user info from token if available
       let userId, userEmail;
-      const authHeader = req.get("Authorization");
-      if (authHeader?.startsWith("Bearer ")) {
+      let authToken = token; // Try token from body first (for sendBeacon)
+      
+      if (!authToken) {
+        // Fallback to Authorization header
+        const authHeader = req.get("Authorization");
+        if (authHeader?.startsWith("Bearer ")) {
+          authToken = authHeader.substring(7);
+        }
+      }
+      
+      if (authToken) {
         try {
-          const token = authHeader.substring(7);
-          const decoded = jwt.verify(token, JWT_SECRET) as any;
+          const decoded = jwt.verify(authToken, JWT_SECRET) as any;
           userId = decoded.userId;
           userEmail = decoded.email;
         } catch (jwtError: any) {
