@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { format } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -162,7 +163,7 @@ export default function SessionAnalytics() {
                       </div>
                       <div className="text-right">
                         <div className="text-sm">
-                          {format(new Date(session.startTime), "MMM dd, yyyy HH:mm")}
+                          {format(toZonedTime(new Date(session.startTime), "Asia/Kolkata"), "MMM dd, yyyy HH:mm")} IST
                         </div>
                         {session.endReason && (
                           <Badge className={getEndReasonColor(session.endReason)}>
@@ -220,7 +221,7 @@ export default function SessionAnalytics() {
                                     </div>
                                   </TableCell>
                                   <TableCell className="text-sm">
-                                    {format(new Date(pageView.entryTime), "HH:mm:ss")}
+                                    {format(toZonedTime(new Date(pageView.entryTime), "Asia/Kolkata"), "HH:mm:ss")} IST
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center gap-1">

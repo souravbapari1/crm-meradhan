@@ -16,6 +16,7 @@ interface PageTrackingContextType {
   currentPageView: PageView | null;
   updateInteractions: () => void;
   updateScrollDepth: (depth: number) => void;
+  trackLogoutAction: () => Promise<void>;
 }
 
 const PageTrackingContext = createContext<PageTrackingContextType | undefined>(undefined);
@@ -41,6 +42,7 @@ const getPageTitle = (path: string): string => {
     '/reports': 'Reports',
     '/user-management': 'User Management',
     '/audit-logs': 'Audit Logs',
+    '/session-analytics': 'Session Analytics',
     '/session-test': 'Session Test',
   };
   return titleMap[path] || `Page: ${path}`;
@@ -221,6 +223,25 @@ export const PageTrackingProvider: React.FC<{ children: React.ReactNode }> = ({ 
     interactionsRef.current += 1;
   };
 
+  const trackLogoutAction = async () => {
+    // Special tracking for logout actions
+    if (currentPageView && pageViewIdRef.current) {
+      interactionsRef.current += 1; // Count logout as an interaction
+      await fetch('/api/page-tracking/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          pageViewId: pageViewIdRef.current,
+          interactions: interactionsRef.current,
+          action: 'logout_initiated'
+        }),
+      }).catch(console.error);
+    }
+  };
+
   const updateScrollDepth = (depth: number) => {
     if (depth > maxScrollRef.current) {
       maxScrollRef.current = depth;
@@ -232,6 +253,7 @@ export const PageTrackingProvider: React.FC<{ children: React.ReactNode }> = ({ 
       currentPageView,
       updateInteractions,
       updateScrollDepth,
+      trackLogoutAction,
     }}>
       {children}
     </PageTrackingContext.Provider>

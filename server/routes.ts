@@ -844,6 +844,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update page tracking (for special actions like logout)
+  app.post("/api/page-tracking/update", authMiddleware, async (req: any, res) => {
+    try {
+      const { pageViewId, interactions, action } = req.body;
+      
+      await storage.updatePageView(pageViewId, {
+        interactions,
+        action,
+      });
+
+      res.json({ message: "Page tracking updated successfully" });
+    } catch (error) {
+      console.error('Page tracking update error:', error);
+      res.status(500).json({ error: "Failed to update page tracking" });
+    }
+  });
+
   // Get session analytics
   app.get("/api/session-analytics", authMiddleware, requireRole(['admin']), async (req, res) => {
     try {

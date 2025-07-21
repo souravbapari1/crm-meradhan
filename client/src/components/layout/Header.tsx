@@ -1,5 +1,6 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePageTracking } from "@/contexts/PageTrackingContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
@@ -19,6 +20,12 @@ interface HeaderProps {
 export default function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { trackLogoutAction } = usePageTracking();
+
+  const handleLogout = async () => {
+    await trackLogoutAction();
+    logout();
+  };
 
   return (
     <header className="bg-card border-b border-border fixed w-full top-0 z-40 shadow-sm">
@@ -79,7 +86,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                 <span>Profile</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout}>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>

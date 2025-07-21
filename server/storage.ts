@@ -609,6 +609,21 @@ export class DatabaseStorage implements IStorage {
       .set(updates)
       .where(eq(pageViews.id, pageViewId));
   }
+
+  async updatePageView(pageViewId: number, data: { interactions?: number; action?: string }): Promise<void> {
+    const updateData: any = {};
+    if (data.interactions !== undefined) {
+      updateData.interactions = data.interactions;
+    }
+    if (data.action) {
+      // Store action in the referrer field for now (we can add a proper action field later if needed)
+      updateData.referrer = `action:${data.action}`;
+    }
+    
+    await db.update(pageViews)
+      .set(updateData)
+      .where(eq(pageViews.id, pageViewId));
+  }
 }
 
 export const storage = new DatabaseStorage();

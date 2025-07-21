@@ -124,10 +124,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Store timeout reference to clear it if tab becomes visible again
         const timeoutId = setTimeout(() => {
           if (document.visibilityState === 'hidden') {
-            console.log('🚪 Tab/window still hidden after 5 seconds - logging out');
+            console.log('🚪 Tab/window still hidden after 15 minutes - logging out');
             autoLogout('browser_close');
           }
-        }, 5000); // 5 seconds delay to avoid false positives
+        }, 15 * 60 * 1000); // 15 minutes delay
         
         // Store timeout ID for potential cleanup
         (window as any).__visibilityTimeout = timeoutId;
@@ -185,10 +185,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    console.log('🚪 Manual logout initiated');
+    
     if (user) {
-      // Log manual logout
-      api.post("/auth/session-end", { reason: 'logout' }).catch(() => {});
+      // Log the session end with detailed audit information
+      const logData = {
+        reason: 'logout',
+        timestamp: new Date().toISOString(),
+        sessionDuration: Date.now() - lastActivityRef.current
+      };
+      
+      // Try to log session end
+      api.post("/auth/session-end", logData).catch(() => {
+        // If regular API fails, try beacon as fallback
+        console.log('Using beacon for logout tracking');
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon("/api/auth/session-end", JSON.stringify({
+            ...logData,
+            token: localStorage.getItem("token")
+          }));
+        }
+      });
     }
+    
     localStorage.removeItem("token");
     setUser(null);
     if (timeoutRef.current) {
