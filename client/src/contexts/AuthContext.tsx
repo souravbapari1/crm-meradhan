@@ -28,12 +28,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const token = localStorage.getItem("token");
     if (user && token) {
+      // Extract sessionToken from JWT token
+      let sessionToken = null;
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        sessionToken = payload.sessionToken;
+      } catch (e) {
+        console.log('Could not extract sessionToken from JWT');
+      }
+      
       // Log the session end with detailed audit information
       const logData = {
         reason,
         timestamp: new Date().toISOString(),
         sessionDuration: Date.now() - lastActivityRef.current,
-        token // Include token for sendBeacon fallback
+        token,
+        sessionToken
       };
       
       // Try to log session end - use both regular API call and beacon for reliability
@@ -105,11 +115,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Use sendBeacon for reliable logout on page unload
       const token = localStorage.getItem("token");
       if (token && user) {
+        // Extract sessionToken from JWT token
+        let sessionToken = null;
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          sessionToken = payload.sessionToken;
+        } catch (e) {
+          console.log('Could not extract sessionToken from JWT');
+        }
+        
         const data = JSON.stringify({ 
           reason: 'browser_close',
           timestamp: new Date().toISOString(),
           sessionDuration: Date.now() - lastActivityRef.current,
-          token // Include token in body since sendBeacon doesn't send custom headers
+          token,
+          sessionToken
         });
         
         if (navigator.sendBeacon) {
@@ -195,9 +215,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionDuration: Date.now() - lastActivityRef.current
       };
       
-      // Try to log session end - include token and sessionToken in main request
+      // Extract sessionToken from JWT token
       const token = localStorage.getItem("token");
-      const sessionToken = localStorage.getItem("sessionToken");
+      let sessionToken = null;
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          sessionToken = payload.sessionToken;
+        } catch (e) {
+          console.log('Could not extract sessionToken from JWT');
+        }
+      }
+      
+      // Try to log session end - include token and sessionToken in main request
       api.post("/auth/session-end", {
         ...logData,
         token,
@@ -206,8 +236,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // If regular API fails, try beacon as fallback
         console.log('Using beacon for logout tracking', error);
         if (navigator.sendBeacon) {
-          const headers = new Headers();
-          headers.append('Content-Type', 'application/json');
           navigator.sendBeacon("/api/auth/session-end", JSON.stringify({
             ...logData,
             token,

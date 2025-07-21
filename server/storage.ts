@@ -37,7 +37,7 @@ import {
   type InsertPageView
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, like, sql, count } from "drizzle-orm";
+import { eq, and, desc, asc, like, sql, count, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -538,6 +538,16 @@ export class DatabaseStorage implements IStorage {
   async getUserSessionByToken(sessionToken: string): Promise<UserSession | undefined> {
     const [session] = await db.select().from(userSessions).where(eq(userSessions.sessionToken, sessionToken));
     return session || undefined;
+  }
+
+  async getActiveUserSessions(userId: number): Promise<UserSession[]> {
+    return await db.select()
+      .from(userSessions)
+      .where(and(
+        eq(userSessions.userId, userId),
+        isNull(userSessions.endTime)
+      ))
+      .orderBy(desc(userSessions.startTime));
   }
 
   async endUserSession(sessionId: number, endReason: string): Promise<void> {

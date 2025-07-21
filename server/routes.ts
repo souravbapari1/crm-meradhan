@@ -231,10 +231,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           userId = decoded.userId;
           userEmail = decoded.email;
           sessionTokenFromJWT = decoded.sessionToken;
+          console.log(`🔑 Token verified for session end - User: ${userEmail}, SessionToken: ${sessionTokenFromJWT}`);
         } catch (jwtError: any) {
           // Token might be expired or invalid, but we still want to log the session end attempt
-          console.log("Invalid token for session end:", jwtError.message);
+          console.log("❌ Invalid token for session end:", jwtError.message);
+          console.log("Token being verified:", authToken?.substring(0, 50) + "...");
         }
+      } else {
+        console.log("❌ No authToken found for session end");
       }
       
       // If we have user info, log the session end
@@ -273,18 +277,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           actionDescription = 'logout';
         }
         
-        // End the user session if we have a sessionToken
+        // End the user session - try sessionToken first, then fallback to most recent active session
         const sessionTokenToUse = sessionTokenFromBody || sessionTokenFromJWT;
+        let session = null;
+        
         if (sessionTokenToUse) {
-          const session = await storage.getUserSessionByToken(sessionTokenToUse);
+          session = await storage.getUserSessionByToken(sessionTokenToUse);
           if (session) {
             await storage.endUserSession(session.id, reason || 'logout');
             console.log(`📋 Session ${session.id} ended for user ${userEmail} - Reason: ${reason || 'logout'}`);
           } else {
-            console.log(`⚠️ Session not found for token: ${sessionTokenToUse}`);
+            console.log(`⚠️ Session not found for token: ${sessionTokenToUse}, trying fallback...`);
           }
-        } else {
-          console.log(`⚠️ No session token available for session end`);
+        }
+        
+        // Fallback: Find most recent active session for this user
+        if (!session && userId) {
+          const activeSessions = await storage.getActiveUserSessions(userId);
+          if (activeSessions.length > 0) {
+            const mostRecentSession = activeSessions[0]; // Most recent first
+            await storage.endUserSession(mostRecentSession.id, reason || 'logout');
+            console.log(`📋 Fallback: Session ${mostRecentSession.id} ended for user ${userEmail} - Reason: ${reason || 'logout'}`);
+          } else {
+            console.log(`⚠️ No active sessions found for user ${userEmail}`);
+          }
         }
         
         // Log to activity logs with detailed audit information
