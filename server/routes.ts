@@ -96,7 +96,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log attempt
       const clientIP = req.ip || req.connection.remoteAddress || "unknown";
       const userAgent = req.get("User-Agent") || "unknown";
-      await storage.createLoginLog(user.id, email, clientIP, userAgent, false);
+      const browserInfo = parseBrowserInfo(userAgent);
+      await storage.createLoginLog(user.id, email, clientIP, userAgent, browserInfo.browserName, browserInfo.deviceType, browserInfo.operatingSystem, 'otp_request', false);
 
       res.json({ message: "OTP sent successfully" });
     } catch (error) {
@@ -189,42 +190,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: "Logout successful" });
   });
 
-  app.post("/api/auth/session-end", authMiddleware, async (req, res) => {
+  app.post("/api/auth/session-end", async (req, res) => {
     try {
-      const { reason } = req.body;
-      const user = (req as any).user;
+      const { reason, timestamp, sessionDuration } = req.body;
       const clientIP = getClientIP(req);
       const userAgent = req.get("User-Agent") || "unknown";
       const browserInfo = parseBrowserInfo(userAgent);
       
-      // Log session end
-      await storage.createLoginLog(
-        user.userId,
-        user.email,
-        clientIP,
-        userAgent,
-        browserInfo.browserName,
-        browserInfo.deviceType,
-        browserInfo.operatingSystem,
-        reason || 'logout',
-        true
-      );
+      // Extract user info from token if available
+      let userId, userEmail;
+      const authHeader = req.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        try {
+          const token = authHeader.substring(7);
+          const decoded = jwt.verify(token, JWT_SECRET) as any;
+          userId = decoded.userId;
+          userEmail = decoded.email;
+        } catch (jwtError: any) {
+          // Token might be expired or invalid, but we still want to log the session end attempt
+          console.log("Invalid token for session end:", jwtError.message);
+        }
+      }
       
-      // Log to activity logs
-      await storage.createActivityLog(
-        user.userId,
-        'user',
-        user.userId,
-        'session_end',
-        { 
+      // If we have user info, log the session end
+      if (userId && userEmail) {
+        // Log session end in login logs
+        await storage.createLoginLog(
+          userId,
+          userEmail,
+          clientIP,
+          userAgent,
+          browserInfo.browserName,
+          browserInfo.deviceType,
+          browserInfo.operatingSystem,
+          reason || 'logout',
+          true
+        );
+        
+        // Create detailed audit log entry for automatic session termination
+        const auditDetails = {
           reason,
+          timestamp: timestamp || new Date().toISOString(),
+          sessionDuration: sessionDuration || 0,
           browserName: browserInfo.browserName,
           deviceType: browserInfo.deviceType,
-          operatingSystem: browserInfo.operatingSystem
-        },
-        clientIP,
-        userAgent
-      );
+          operatingSystem: browserInfo.operatingSystem,
+          clientIP,
+          userAgent
+        };
+        
+        let actionDescription = 'session_end';
+        if (reason === 'timeout') {
+          actionDescription = 'auto_logout_timeout';
+        } else if (reason === 'browser_close') {
+          actionDescription = 'auto_logout_browser_close';
+        }
+        
+        // Log to activity logs with detailed audit information
+        await storage.createActivityLog(
+          userId,
+          'user',
+          userId,
+          actionDescription,
+          auditDetails,
+          clientIP,
+          userAgent
+        );
+        
+        console.log(`📋 Session ended for user ${userEmail} (ID: ${userId}) - Reason: ${reason}`);
+      } else {
+        console.log(`⚠️ Session end attempt without valid user context - Reason: ${reason}`);
+      }
       
       res.json({ message: "Session ended" });
     } catch (error) {

@@ -25,10 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Auto logout function
   const autoLogout = useCallback((reason: 'timeout' | 'browser_close' = 'timeout') => {
     console.log(`🔒 Session terminating due to: ${reason}`);
-    if (user) {
-      // Log the session end
-      api.post("/auth/session-end", { reason }).catch(() => {});
+    
+    const token = localStorage.getItem("token");
+    if (user && token) {
+      // Log the session end with detailed audit information
+      const logData = {
+        reason,
+        timestamp: new Date().toISOString(),
+        sessionDuration: Date.now() - lastActivityRef.current
+      };
+      
+      // Try to log session end - use both regular API call and beacon for reliability
+      api.post("/auth/session-end", logData).catch(() => {
+        // If regular API fails, try beacon as fallback
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon("/api/auth/session-end", JSON.stringify(logData));
+        }
+      });
     }
+    
     localStorage.removeItem("token");
     setUser(null);
     if (timeoutRef.current) {
@@ -87,10 +102,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleBeforeUnload = () => {
       console.log('📡 Browser/tab closing - sending session end signal');
       // Use sendBeacon for reliable logout on page unload
-      if (navigator.sendBeacon) {
-        const token = localStorage.getItem("token");
-        if (token) {
-          const data = JSON.stringify({ reason: 'browser_close' });
+      const token = localStorage.getItem("token");
+      if (token && user) {
+        const data = JSON.stringify({ 
+          reason: 'browser_close',
+          timestamp: new Date().toISOString(),
+          sessionDuration: Date.now() - lastActivityRef.current
+        });
+        
+        if (navigator.sendBeacon) {
           navigator.sendBeacon("/api/auth/session-end", data);
         }
       }

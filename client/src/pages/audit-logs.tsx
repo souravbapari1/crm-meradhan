@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Filter, Download, History, User, FileText, Users, ShoppingCart, Ticket, Monitor, Smartphone, Tablet, LogIn, LogOut, Timer, X } from "lucide-react";
+import { Search, Filter, Download, History, User, FileText, Users, ShoppingCart, Ticket, Monitor, Smartphone, Tablet, LogIn, LogOut, Timer, X, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 
@@ -94,6 +94,11 @@ export default function AuditLogs() {
       case "create": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "update": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "delete": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case "login": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "logout": return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+      case "auto_logout_timeout": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case "auto_logout_browser_close": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case "session_end": return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
       default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
     }
   };
@@ -237,12 +242,27 @@ export default function AuditLogs() {
                         </TableCell>
                         <TableCell>
                           <Badge className={getActionColor(log.action)}>
-                            {log.action.toUpperCase()}
+                            {log.action === 'auto_logout_timeout' ? 'AUTO LOGOUT (TIMEOUT)' :
+                             log.action === 'auto_logout_browser_close' ? 'AUTO LOGOUT (BROWSER CLOSE)' :
+                             log.action.toUpperCase()}
                           </Badge>
                         </TableCell>
                         <TableCell className="max-w-xs">
-                          <div className="truncate text-sm text-muted-foreground">
-                            {JSON.stringify(log.details)}
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            {log.action.startsWith('auto_logout') && log.details ? (
+                              <div className="space-y-1">
+                                <div>Reason: {log.details.reason}</div>
+                                {log.details.timestamp && (
+                                  <div>Time: {format(new Date(log.details.timestamp), "HH:mm:ss")}</div>
+                                )}
+                                {log.details.sessionDuration && (
+                                  <div>Duration: {Math.floor(log.details.sessionDuration / 1000 / 60)}m {Math.floor((log.details.sessionDuration / 1000) % 60)}s</div>
+                                )}
+                                <div>Device: {log.details.deviceType} - {log.details.browserName}</div>
+                              </div>
+                            ) : (
+                              <div className="truncate">{JSON.stringify(log.details)}</div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
