@@ -129,3 +129,16 @@ Preferred communication style: Simple, everyday language.
 - **Audit Trail**: Comprehensive logging for compliance requirements
 
 The application is designed to be production-ready with proper error handling, type safety, and scalability considerations built into the architecture from the ground up.
+
+## Recent Changes
+
+### July 21, 2025 - IST Timezone Fix
+- **Issue Resolved**: Double IST conversion causing timestamps to display 5.5 hours ahead
+- **Root Cause**: Frontend was adding timezone offset to already-converted IST times from database
+- **Solution Implemented**: 
+  - Fixed database schema to allow explicit IST timestamp storage
+  - Updated backend to store proper IST times (UTC + 5:30)
+  - Added frontend safety checks with 'Z' suffix to prevent browser timezone interference
+  - Verified timestamps now display correct IST time matching user's local time
+- **Components Fixed**: Session analytics, audit logs, login history, activity tracking
+- **Verification**: User confirmed timestamps now match actual IST (15:51 displayed = 15:51 actual)
