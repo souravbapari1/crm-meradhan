@@ -118,40 +118,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     const handleBeforeUnload = (event?: BeforeUnloadEvent) => {
-      console.log('📡 Browser/tab closing - sending session end signal');
-      // Use sendBeacon for reliable logout on page unload
-      const token = localStorage.getItem("token");
-      if (token && user) {
-        // Extract sessionToken from JWT token
-        let sessionToken = null;
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          sessionToken = payload.sessionToken;
-        } catch (e) {
-          console.log('Could not extract sessionToken from JWT');
-        }
-        
-        const data = JSON.stringify({ 
-          reason: 'browser_close',
-          timestamp: new Date().toISOString(),
-          sessionDuration: Date.now() - lastActivityRef.current,
-          token,
-          sessionToken
-        });
-        
-        // Send session end signal with proper Content-Type header
-        const blob = new Blob([data], { type: 'application/json' });
-        if (navigator.sendBeacon) {
-          const success = navigator.sendBeacon("/api/auth/session-end", blob);
-          console.log(`📡 SendBeacon ${success ? 'succeeded' : 'failed'} for session termination`);
-          console.log(`📡 Sent data:`, JSON.parse(data));
-        }
-        
-        // Clear localStorage immediately to prevent auto-login on new tab
-        localStorage.removeItem("token");
-        localStorage.removeItem("sessionToken");
-        console.log('🧹 Cleared localStorage on window close');
-      }
+      console.log('📡 beforeunload triggered - marking potential session end');
+      
+      // Set a flag with timestamp - if page reloads soon, it's a refresh not close
+      sessionStorage.setItem('beforeUnloadTime', Date.now().toString());
+      sessionStorage.setItem('potentialClose', 'true');
+      
+      // DON'T clear localStorage immediately - wait to see if it's refresh
+      // DON'T send session end immediately - use delayed check instead
     };
 
     const handleVisibilityChange = () => {
@@ -162,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (document.visibilityState === 'hidden') {
             console.log('🚪 Tab/window still hidden after 15 minutes - terminating session');
             // Send session end immediately and clear localStorage
-            handleBeforeUnload();
+            sendSessionEndSignal('browser_close', true);
             autoLogout('browser_close');
           }
         }, 15 * 60 * 1000); // 15 minutes delay
@@ -179,10 +153,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    // Check for delayed session end (real tab close vs refresh)
+    const checkDelayedSessionEnd = () => {
+      const beforeUnloadTime = sessionStorage.getItem('beforeUnloadTime');
+      const potentialClose = sessionStorage.getItem('potentialClose');
+      
+      if (beforeUnloadTime && potentialClose) {
+        const timeDiff = Date.now() - parseInt(beforeUnloadTime);
+        if (timeDiff > 2000) {
+          // More than 2 seconds passed = likely real tab close
+          console.log('📡 Delayed detection: Real tab close - sending session end');
+          sendSessionEndSignal('browser_close', true);
+        } else {
+          console.log('📡 Page reloaded quickly - this was a refresh, not tab close');
+        }
+        // Clean up flags
+        sessionStorage.removeItem('beforeUnloadTime');
+        sessionStorage.removeItem('potentialClose');
+      }
+    };
+
+    // Send session end signal
+    const sendSessionEndSignal = (reason: string, clearStorage: boolean = false) => {
+      const token = localStorage.getItem("token");
+      if (token && user) {
+        let sessionToken = null;
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          sessionToken = payload.sessionToken;
+        } catch (e) {
+          console.log('Could not extract sessionToken from JWT');
+        }
+        
+        const data = JSON.stringify({ 
+          reason,
+          timestamp: new Date().toISOString(),
+          sessionDuration: Date.now() - lastActivityRef.current,
+          token,
+          sessionToken
+        });
+        
+        const blob = new Blob([data], { type: 'application/json' });
+        if (navigator.sendBeacon) {
+          const success = navigator.sendBeacon("/api/auth/session-end", blob);
+          console.log(`📡 SendBeacon ${success ? 'succeeded' : 'failed'} for ${reason}`);
+        }
+        
+        // Only clear localStorage for actual tab close
+        if (clearStorage) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("sessionToken");
+          console.log('🧹 Cleared localStorage - session terminated');
+        }
+      }
+    };
+
+    // Check for delayed session end on load (after potential beforeunload)
+    const delayedCheckTimer = setTimeout(checkDelayedSessionEnd, 2500);
+
+    // Clear any previous flags on page load (refresh detected)
+    sessionStorage.removeItem('beforeUnloadTime');
+    sessionStorage.removeItem('potentialClose');
+
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      clearTimeout(delayedCheckTimer);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
