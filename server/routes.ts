@@ -375,7 +375,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/dashboard/recent-activities", authMiddleware, async (req, res) => {
     try {
-      const activities = await storage.getRecentActivities(10);
+      const user = (req as any).user;
+      let activities;
+      
+      if (user.role === 'admin') {
+        // Admin sees all activities
+        activities = await storage.getRecentActivities(10);
+      } else {
+        // Non-admin users see only their own activities
+        activities = await storage.getRecentActivitiesByUser(user.userId, 10);
+      }
+      
       res.json(activities);
     } catch (error) {
       console.error("Recent activities error:", error);

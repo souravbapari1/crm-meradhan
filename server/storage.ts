@@ -524,6 +524,26 @@ export class DatabaseStorage implements IStorage {
     .limit(limit);
   }
 
+  async getRecentActivitiesByUser(userId: number, limit: number = 10): Promise<any[]> {
+    return await db.select({
+      id: activityLogs.id,
+      userId: activityLogs.userId,
+      action: activityLogs.action,
+      entityType: activityLogs.entityType,
+      entityId: activityLogs.entityId,
+      details: activityLogs.details,
+      ipAddress: activityLogs.ipAddress,
+      userAgent: activityLogs.userAgent,
+      createdAt: activityLogs.createdAt,
+      userName: users.name,
+    })
+    .from(activityLogs)
+    .leftJoin(users, eq(activityLogs.userId, users.id))
+    .where(eq(activityLogs.userId, userId))
+    .orderBy(desc(activityLogs.createdAt))
+    .limit(limit);
+  }
+
   // Session tracking methods
   async createUserSession(session: InsertUserSession): Promise<UserSession> {
     // Convert to IST (UTC+5:30) before storing

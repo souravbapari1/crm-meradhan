@@ -149,3 +149,10 @@ The application is designed to be production-ready with proper error handling, t
 - **Session Analytics UX**: Removed 5-second auto-refresh per user request to allow uninterrupted scrolling through session history
 - **Manual Refresh**: Kept manual refresh button for on-demand updates
 - **Session Persistence**: Sessions now properly maintain continuity across page refreshes
+
+### July 22, 2025 - Role-Based Dashboard Activities
+- **Privacy Enhancement**: Implemented role-based filtering for recent activities on dashboard
+- **Admin Access**: Admin users continue to see all activities from all users
+- **Non-Admin Privacy**: Non-admin users (sales, support, RM, viewer) now see only their own activities
+- **Data Security**: Prevents unauthorized access to other users' activity information
+- **Compliance**: Aligns with data privacy requirements for multi-user CRM systems
