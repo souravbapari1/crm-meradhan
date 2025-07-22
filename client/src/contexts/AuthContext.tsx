@@ -118,16 +118,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      console.log('📡 beforeunload triggered - immediate logout');
+      console.log('📡 beforeunload triggered');
+      
+      // Create backup immediately before anything else
+      const token = localStorage.getItem("token");
+      const sessionToken = localStorage.getItem("sessionToken");
+      
+      if (token && sessionToken) {
+        sessionStorage.setItem('tokenBackup', token);
+        sessionStorage.setItem('sessionTokenBackup', sessionToken);
+        sessionStorage.setItem('beforeUnloadTime', Date.now().toString());
+        console.log('💾 Created session backup before clearing');
+      }
       
       // Send session end beacon  
       sendSessionEndSignal('browser_close', false);
       
-      // Clear localStorage immediately - this is the only reliable way
+      // Clear localStorage
       localStorage.removeItem("token");
       localStorage.removeItem("sessionToken");
       
-      console.log('🧹 localStorage cleared immediately on beforeunload');
+      console.log('🧹 localStorage cleared on beforeunload');
     };
 
     const handleVisibilityChange = () => {
@@ -158,21 +169,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Handle page refresh by restoring from sessionStorage backup
     const handlePageReload = () => {
       const token = localStorage.getItem("token");
+      const beforeUnloadTime = sessionStorage.getItem('beforeUnloadTime');
       
-      if (!token && sessionStorage.getItem('tokenBackup')) {
-        // This is a page refresh - restore the session
-        const backupToken = sessionStorage.getItem('tokenBackup');
-        const backupSessionToken = sessionStorage.getItem('sessionTokenBackup');
+      if (!token && beforeUnloadTime && sessionStorage.getItem('tokenBackup')) {
+        const timeDiff = Date.now() - parseInt(beforeUnloadTime);
         
-        if (backupToken && backupSessionToken) {
-          console.log('📡 Page refresh detected - restoring session from backup');
-          localStorage.setItem("token", backupToken);
-          localStorage.setItem("sessionToken", backupSessionToken);
+        if (timeDiff < 5000) {
+          // Less than 5 seconds = page refresh, restore session
+          const backupToken = sessionStorage.getItem('tokenBackup');
+          const backupSessionToken = sessionStorage.getItem('sessionTokenBackup');
+          
+          if (backupToken && backupSessionToken) {
+            console.log('📡 Page refresh detected - restoring session from backup');
+            localStorage.setItem("token", backupToken);
+            localStorage.setItem("sessionToken", backupSessionToken);
+          }
+        } else {
+          console.log('📡 Tab close detected - not restoring session');
         }
         
-        // Clean up backup after use
+        // Clean up backup
         sessionStorage.removeItem('tokenBackup');
         sessionStorage.removeItem('sessionTokenBackup');
+        sessionStorage.removeItem('beforeUnloadTime');
       }
     };
 
@@ -214,35 +233,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Handle page reload detection on component mount
     handlePageReload();
 
-    // Create session backup for page refresh detection
-    const createSessionBackup = () => {
-      const token = localStorage.getItem("token");
-      const sessionToken = localStorage.getItem("sessionToken");
-      
-      if (token && sessionToken) {
-        sessionStorage.setItem('tokenBackup', token);
-        sessionStorage.setItem('sessionTokenBackup', sessionToken);
-      }
-    };
-    
-    // Create backup on page visibility changes (not perfect but helps)
-    const handleVisibilityBackup = () => {
-      if (document.visibilityState === 'hidden') {
-        createSessionBackup();
-      }
-    };
-    
-    // Create initial backup
-    createSessionBackup();
+    // No need for additional backup creation - handled in beforeunload
     
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    document.addEventListener('visibilitychange', handleVisibilityBackup);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      document.removeEventListener('visibilitychange', handleVisibilityBackup);
     };
   }, [user, autoLogout]);
 
