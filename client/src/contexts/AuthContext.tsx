@@ -118,16 +118,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!user) return;
 
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      console.log('📡 beforeunload triggered - sending session end beacon');
-      
-      // Set a marker in sessionStorage to detect if page reloads
-      sessionStorage.setItem('pageUnloading', Date.now().toString());
+      console.log('📡 beforeunload triggered - immediate logout');
       
       // Send session end beacon  
       sendSessionEndSignal('browser_close', false);
       
-      // Don't clear localStorage yet - wait for page load to confirm
-      console.log('📡 Session end beacon sent, waiting for confirmation');
+      // Clear localStorage immediately - this is the only reliable way
+      localStorage.removeItem("token");
+      localStorage.removeItem("sessionToken");
+      
+      console.log('🧹 localStorage cleared immediately on beforeunload');
     };
 
     const handleVisibilityChange = () => {
@@ -155,25 +155,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Check if this is a page reload vs new tab after close
-    const checkPageUnload = () => {
-      const pageUnloading = sessionStorage.getItem('pageUnloading');
+    // Handle page refresh by restoring from sessionStorage backup
+    const handlePageReload = () => {
+      const token = localStorage.getItem("token");
       
-      if (pageUnloading) {
-        const timeDiff = Date.now() - parseInt(pageUnloading);
+      if (!token && sessionStorage.getItem('tokenBackup')) {
+        // This is a page refresh - restore the session
+        const backupToken = sessionStorage.getItem('tokenBackup');
+        const backupSessionToken = sessionStorage.getItem('sessionTokenBackup');
         
-        if (timeDiff < 2000) {
-          // Less than 2 seconds = page refresh, restore session
-          console.log('📡 Page refresh detected - keeping session');
-          sessionStorage.removeItem('pageUnloading');
-        } else {
-          // More than 2 seconds = new tab after close, logout
-          console.log('📡 New tab after close detected - clearing session');
-          localStorage.removeItem("token");
-          localStorage.removeItem("sessionToken");
-          sessionStorage.removeItem('pageUnloading');
-          setUser(null);
+        if (backupToken && backupSessionToken) {
+          console.log('📡 Page refresh detected - restoring session from backup');
+          localStorage.setItem("token", backupToken);
+          localStorage.setItem("sessionToken", backupSessionToken);
         }
+        
+        // Clean up backup after use
+        sessionStorage.removeItem('tokenBackup');
+        sessionStorage.removeItem('sessionTokenBackup');
       }
     };
 
@@ -212,15 +211,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Check for page unload on component mount
-    checkPageUnload();
+    // Handle page reload detection on component mount
+    handlePageReload();
 
+    // Create session backup for page refresh detection
+    const createSessionBackup = () => {
+      const token = localStorage.getItem("token");
+      const sessionToken = localStorage.getItem("sessionToken");
+      
+      if (token && sessionToken) {
+        sessionStorage.setItem('tokenBackup', token);
+        sessionStorage.setItem('sessionTokenBackup', sessionToken);
+      }
+    };
+    
+    // Create backup on page visibility changes (not perfect but helps)
+    const handleVisibilityBackup = () => {
+      if (document.visibilityState === 'hidden') {
+        createSessionBackup();
+      }
+    };
+    
+    // Create initial backup
+    createSessionBackup();
+    
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('visibilitychange', handleVisibilityBackup);
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('visibilitychange', handleVisibilityBackup);
     };
   }, [user, autoLogout]);
 
