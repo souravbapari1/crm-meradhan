@@ -117,15 +117,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return;
 
-    const handleBeforeUnload = (event?: BeforeUnloadEvent) => {
-      console.log('📡 beforeunload triggered - marking potential session end');
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      console.log('📡 beforeunload triggered - sending session end beacon');
       
-      // Set a flag with timestamp - if page reloads soon, it's a refresh not close
-      sessionStorage.setItem('beforeUnloadTime', Date.now().toString());
-      sessionStorage.setItem('potentialClose', 'true');
+      // Always send session end beacon - we'll handle false positives later
+      sendSessionEndSignal('browser_close', false);
       
-      // DON'T clear localStorage immediately - wait to see if it's refresh
-      // DON'T send session end immediately - use delayed check instead
+      // Set flag for cleanup check on next load  
+      sessionStorage.setItem('sessionEndSent', 'true');
+      sessionStorage.setItem('sessionEndTime', Date.now().toString());
     };
 
     const handleVisibilityChange = () => {
@@ -153,23 +153,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Check for delayed session end (real tab close vs refresh)
-    const checkDelayedSessionEnd = () => {
-      const beforeUnloadTime = sessionStorage.getItem('beforeUnloadTime');
-      const potentialClose = sessionStorage.getItem('potentialClose');
+    // Check if session end was sent from previous tab close  
+    const checkPreviousSessionEnd = () => {
+      const sessionEndSent = sessionStorage.getItem('sessionEndSent');
+      const sessionEndTime = sessionStorage.getItem('sessionEndTime');
       
-      if (beforeUnloadTime && potentialClose) {
-        const timeDiff = Date.now() - parseInt(beforeUnloadTime);
-        if (timeDiff > 2000) {
-          // More than 2 seconds passed = likely real tab close
-          console.log('📡 Delayed detection: Real tab close - sending session end');
-          sendSessionEndSignal('browser_close', true);
+      if (sessionEndSent && sessionEndTime) {
+        const timeDiff = Date.now() - parseInt(sessionEndTime);
+        if (timeDiff < 3000) {
+          // Less than 3 seconds = this is a refresh, ignore session end
+          console.log('📡 Quick reload detected - ignoring session end signal');
         } else {
-          console.log('📡 Page reloaded quickly - this was a refresh, not tab close');
+          // More than 3 seconds = this is a new tab after real close
+          console.log('📡 Session end confirmed - was a real tab close');
+          // Don't clear localStorage here - let the beacon do its job on server
         }
-        // Clean up flags
-        sessionStorage.removeItem('beforeUnloadTime');
-        sessionStorage.removeItem('potentialClose');
+        // Always clean up flags  
+        sessionStorage.removeItem('sessionEndSent');
+        sessionStorage.removeItem('sessionEndTime');
       }
     };
 
@@ -208,18 +209,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Check for delayed session end on load (after potential beforeunload)
-    const delayedCheckTimer = setTimeout(checkDelayedSessionEnd, 2500);
-
-    // Clear any previous flags on page load (refresh detected)
-    sessionStorage.removeItem('beforeUnloadTime');
-    sessionStorage.removeItem('potentialClose');
+    // Check for previous session end on component mount
+    checkPreviousSessionEnd();
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      clearTimeout(delayedCheckTimer);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };

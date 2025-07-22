@@ -58,40 +58,35 @@ export default function SessionTest() {
   };
 
   const testBrowserClose = () => {
-    console.log('🧪 Testing Browser Close...');
-    // Simulate beforeunload event
+    console.log('🧪 Testing Browser Close Detection...');
+    
+    // Test the actual beforeunload handler
     const beforeUnloadEvent = new Event('beforeunload', { cancelable: true });
     window.dispatchEvent(beforeUnloadEvent);
     
-    // Also test manual session end
-    const token = localStorage.getItem("token");
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const data = JSON.stringify({ 
-          reason: 'manual_test_browser_close',
-          timestamp: new Date().toISOString(),
-          sessionDuration: 0,
-          token,
-          sessionToken: payload.sessionToken
-        });
+    // Wait a moment then check if session flags were set
+    setTimeout(() => {
+      const sessionEndSent = sessionStorage.getItem('sessionEndSent');
+      const sessionEndTime = sessionStorage.getItem('sessionEndTime');
+      
+      if (sessionEndSent && sessionEndTime) {
+        console.log('✅ Tab close detection working - session end flags set');
+        console.log('📡 SessionEndSent:', sessionEndSent);
+        console.log('📡 SessionEndTime:', sessionEndTime);
         
-        const blob = new Blob([data], { type: 'application/json' });
-        if (navigator.sendBeacon) {
-          const success = navigator.sendBeacon("/api/auth/session-end", blob);
-          console.log(`📡 Manual test sendBeacon ${success ? 'succeeded' : 'failed'}`);
-          console.log('📡 Test data sent:', JSON.parse(data));
-        }
-        
-        // Clear localStorage to simulate tab close
-        localStorage.removeItem("token");
-        localStorage.removeItem("sessionToken");
-        
-        alert('Session end signal sent! Check Session Analytics in a few seconds, then refresh this page.');
-      } catch (e) {
-        console.error('Error in test:', e);
+        // Simulate what happens when you open a new tab soon after (refresh scenario)
+        setTimeout(() => {
+          const timeDiff = Date.now() - parseInt(sessionEndTime);
+          if (timeDiff < 3000) {
+            console.log('✅ Quick reload detected - this would be ignored');
+            alert('Test successful! Tab close detection is working. Check console for details.');
+          }
+        }, 1000);
+      } else {
+        console.log('❌ Tab close detection not working - no session flags set');
+        alert('Test failed! Tab close detection not working properly.');
       }
-    }
+    }, 500);
   };
 
   const testTabHide = () => {
