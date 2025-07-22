@@ -120,12 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       console.log('📡 beforeunload triggered - sending session end beacon');
       
-      // Always send session end beacon - we'll handle false positives later
+      // Set a marker in sessionStorage to detect if page reloads
+      sessionStorage.setItem('pageUnloading', Date.now().toString());
+      
+      // Send session end beacon  
       sendSessionEndSignal('browser_close', false);
       
-      // Set flag for cleanup check on next load  
-      sessionStorage.setItem('sessionEndSent', 'true');
-      sessionStorage.setItem('sessionEndTime', Date.now().toString());
+      // Don't clear localStorage yet - wait for page load to confirm
+      console.log('📡 Session end beacon sent, waiting for confirmation');
     };
 
     const handleVisibilityChange = () => {
@@ -153,24 +155,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Check if session end was sent from previous tab close  
-    const checkPreviousSessionEnd = () => {
-      const sessionEndSent = sessionStorage.getItem('sessionEndSent');
-      const sessionEndTime = sessionStorage.getItem('sessionEndTime');
+    // Check if this is a page reload vs new tab after close
+    const checkPageUnload = () => {
+      const pageUnloading = sessionStorage.getItem('pageUnloading');
       
-      if (sessionEndSent && sessionEndTime) {
-        const timeDiff = Date.now() - parseInt(sessionEndTime);
-        if (timeDiff < 3000) {
-          // Less than 3 seconds = this is a refresh, ignore session end
-          console.log('📡 Quick reload detected - ignoring session end signal');
+      if (pageUnloading) {
+        const timeDiff = Date.now() - parseInt(pageUnloading);
+        
+        if (timeDiff < 2000) {
+          // Less than 2 seconds = page refresh, restore session
+          console.log('📡 Page refresh detected - keeping session');
+          sessionStorage.removeItem('pageUnloading');
         } else {
-          // More than 3 seconds = this is a new tab after real close
-          console.log('📡 Session end confirmed - was a real tab close');
-          // Don't clear localStorage here - let the beacon do its job on server
+          // More than 2 seconds = new tab after close, logout
+          console.log('📡 New tab after close detected - clearing session');
+          localStorage.removeItem("token");
+          localStorage.removeItem("sessionToken");
+          sessionStorage.removeItem('pageUnloading');
+          setUser(null);
         }
-        // Always clean up flags  
-        sessionStorage.removeItem('sessionEndSent');
-        sessionStorage.removeItem('sessionEndTime');
       }
     };
 
@@ -209,8 +212,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Check for previous session end on component mount
-    checkPreviousSessionEnd();
+    // Check for page unload on component mount
+    checkPageUnload();
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     document.addEventListener('visibilitychange', handleVisibilityChange);
