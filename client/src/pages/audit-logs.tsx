@@ -255,9 +255,7 @@ export default function AuditLogs() {
                                 return (
                                   <div className="space-y-1">
                                     <div>Reason: {log.details.reason || 'browser_close'}</div>
-                                    {log.details.timestamp && (
-                                      <div>Time: {format(new Date(log.details.timestamp.replace('Z', '')), "HH:mm:ss")} IST</div>
-                                    )}
+                                    <div>Time: {format(new Date(log.createdAt.replace('Z', '')), "HH:mm:ss")} IST</div>
                                     {log.details.sessionDuration !== undefined && (
                                       <div>Duration: {Math.floor(log.details.sessionDuration / 1000 / 60)}m {Math.floor((log.details.sessionDuration / 1000) % 60)}s</div>
                                     )}
@@ -284,9 +282,7 @@ export default function AuditLogs() {
                                 return (
                                   <div className="space-y-1">
                                     <div>Reason: {log.details.reason || 'logout'}</div>
-                                    {log.details.timestamp && (
-                                      <div>Time: {format(new Date(log.details.timestamp.replace('Z', '')), "HH:mm:ss")} IST</div>
-                                    )}
+                                    <div>Time: {format(new Date(log.createdAt.replace('Z', '')), "HH:mm:ss")} IST</div>
                                     {log.details.sessionDuration !== undefined && (
                                       <div>Duration: {Math.floor(log.details.sessionDuration / 1000 / 60)}m {Math.floor((log.details.sessionDuration / 1000) % 60)}s</div>
                                     )}
