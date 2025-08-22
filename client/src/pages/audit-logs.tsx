@@ -249,20 +249,77 @@ export default function AuditLogs() {
                         </TableCell>
                         <TableCell className="max-w-xs">
                           <div className="text-sm text-muted-foreground space-y-1">
-                            {log.action.startsWith('auto_logout') && log.details ? (
-                              <div className="space-y-1">
-                                <div>Reason: {log.details.reason}</div>
-                                {log.details.timestamp && (
-                                  <div>Time: {format(new Date(log.details.timestamp.replace('Z', '')), "HH:mm:ss")} IST</div>
-                                )}
-                                {log.details.sessionDuration && (
-                                  <div>Duration: {Math.floor(log.details.sessionDuration / 1000 / 60)}m {Math.floor((log.details.sessionDuration / 1000) % 60)}s</div>
-                                )}
-                                <div>Device: {log.details.deviceType} - {log.details.browserName}</div>
-                              </div>
-                            ) : (
-                              <div className="truncate">{JSON.stringify(log.details)}</div>
-                            )}
+                            {log.details && (() => {
+                              // Handle auto logout events
+                              if (log.action.startsWith('auto_logout')) {
+                                return (
+                                  <div className="space-y-1">
+                                    <div>Reason: {log.details.reason || 'browser_close'}</div>
+                                    {log.details.timestamp && (
+                                      <div>Time: {format(new Date(log.details.timestamp.replace('Z', '')), "HH:mm:ss")} IST</div>
+                                    )}
+                                    {log.details.sessionDuration !== undefined && (
+                                      <div>Duration: {Math.floor(log.details.sessionDuration / 1000 / 60)}m {Math.floor((log.details.sessionDuration / 1000) % 60)}s</div>
+                                    )}
+                                    <div>Device: {log.details.deviceType || 'desktop'} - {log.details.browserName || 'Unknown'}</div>
+                                  </div>
+                                );
+                              }
+                              
+                              // Handle login events
+                              if (log.action === 'login') {
+                                return (
+                                  <div className="space-y-1">
+                                    <div>Action: User login</div>
+                                    <div>Device: {log.details.deviceType || 'desktop'} - {log.details.browserName || 'Unknown'}</div>
+                                    {log.details.operatingSystem && (
+                                      <div>OS: {log.details.operatingSystem}</div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              
+                              // Handle logout events
+                              if (log.action === 'logout') {
+                                return (
+                                  <div className="space-y-1">
+                                    <div>Reason: {log.details.reason || 'logout'}</div>
+                                    {log.details.timestamp && (
+                                      <div>Time: {format(new Date(log.details.timestamp.replace('Z', '')), "HH:mm:ss")} IST</div>
+                                    )}
+                                    {log.details.sessionDuration !== undefined && (
+                                      <div>Duration: {Math.floor(log.details.sessionDuration / 1000 / 60)}m {Math.floor((log.details.sessionDuration / 1000) % 60)}s</div>
+                                    )}
+                                    <div>Device: {log.details.deviceType || 'desktop'} - {log.details.browserName || 'Unknown'}</div>
+                                  </div>
+                                );
+                              }
+                              
+                              // Handle entity actions (create, update, delete)
+                              if (['create', 'update', 'delete'].includes(log.action)) {
+                                return (
+                                  <div className="space-y-1">
+                                    <div>Action: {log.action} {log.entityType}</div>
+                                    {log.details.leadName && <div>Name: {log.details.leadName}</div>}
+                                    {log.details.customerName && <div>Name: {log.details.customerName}</div>}
+                                    {log.details.rfqNumber && <div>RFQ: {log.details.rfqNumber}</div>}
+                                    {log.details.ticketNumber && <div>Ticket: {log.details.ticketNumber}</div>}
+                                    {log.details.updates && (
+                                      <div>Updated: {Object.keys(log.details.updates).join(', ')}</div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              
+                              // Default fallback for other action types
+                              return (
+                                <div className="space-y-1">
+                                  {Object.entries(log.details).map(([key, value], index) => (
+                                    <div key={index}>{key}: {String(value)}</div>
+                                  )).slice(0, 3)}
+                                </div>
+                              );
+                            })()}
                           </div>
                         </TableCell>
                         <TableCell>
