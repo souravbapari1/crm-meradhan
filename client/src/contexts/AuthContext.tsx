@@ -131,10 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('💾 Created session backup before clearing');
       }
       
-      // Send session end beacon  
-      sendSessionEndSignal('browser_close', false);
+      // Only send session end signal for actual browser close, not page refresh
+      // We'll rely on visibility change for better detection
       
-      // Clear localStorage
+      // Clear localStorage (will be restored on page load if it's just a refresh)
       localStorage.removeItem("token");
       localStorage.removeItem("sessionToken");
       
@@ -143,22 +143,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        console.log('👁️ Tab/window hidden - starting logout timer');
-        // Store timeout reference to clear it if tab becomes visible again
+        console.log('👁️ Tab/window hidden');
+        // Set a flag that tab is hidden and start a delayed logout
+        sessionStorage.setItem('tabHiddenTime', Date.now().toString());
+        
+        // Wait longer before considering it a browser close
         const timeoutId = setTimeout(() => {
           if (document.visibilityState === 'hidden') {
-            console.log('🚪 Tab/window still hidden after 15 minutes - terminating session');
-            // Send session end immediately and clear localStorage
-            sendSessionEndSignal('browser_close', true);
-            autoLogout('browser_close');
+            // Check if the page was refreshed during the hidden period
+            const tokenBackup = sessionStorage.getItem('tokenBackup');
+            if (!tokenBackup) {
+              console.log('🚪 Tab/window closed - terminating session');
+              sendSessionEndSignal('browser_close', true);
+              autoLogout('browser_close');
+            }
           }
-        }, 15 * 60 * 1000); // 15 minutes delay
+        }, 30 * 1000); // 30 seconds delay for better accuracy
         
         // Store timeout ID for potential cleanup
         (window as any).__visibilityTimeout = timeoutId;
       } else {
         console.log('👁️ Tab/window visible again');
-        // Clear timeout if tab becomes visible again
+        // Clear the hidden flag and timeout
+        sessionStorage.removeItem('tabHiddenTime');
         if ((window as any).__visibilityTimeout) {
           clearTimeout((window as any).__visibilityTimeout);
           delete (window as any).__visibilityTimeout;
