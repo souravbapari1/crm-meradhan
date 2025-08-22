@@ -149,7 +149,7 @@ export default function AuditLogs() {
               const csvContent = [
                 "Timestamp,Entity,Action,Details,User ID,User Full Name,IP Address",
                 ...filteredLogs.map(log => 
-                  `"${format(new Date(log.createdAt), "MMM dd, yyyy HH:mm")}","${log.entityType}","${log.action}","${JSON.stringify(log.details).replace(/"/g, '""')}","${log.userId}","${log.userName || 'Unknown'}","${log.ipAddress}"`
+                  `"${format(new Date(log.createdAt), "MMM dd, yyyy HH:mm:ss")}","${log.entityType}","${log.action}","${JSON.stringify(log.details).replace(/"/g, '""')}","${log.userId}","${log.userName || 'Unknown'}","${log.ipAddress}"`
                 )
               ].join('\n');
               
@@ -232,7 +232,7 @@ export default function AuditLogs() {
                     filteredLogs.map((log) => (
                       <TableRow key={log.id}>
                         <TableCell className="font-medium">
-                          {format(new Date(log.createdAt.replace('Z', '')), "MMM dd, yyyy HH:mm")} IST
+                          {format(new Date(log.createdAt.replace('Z', '')), "MMM dd, yyyy HH:mm:ss")} IST
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -269,6 +269,7 @@ export default function AuditLogs() {
                                 return (
                                   <div className="space-y-1">
                                     <div>Action: User login</div>
+                                    <div>Time: {format(new Date(log.createdAt.replace('Z', '')), "HH:mm:ss")} IST</div>
                                     <div>Device: {log.details.deviceType || 'desktop'} - {log.details.browserName || 'Unknown'}</div>
                                     {log.details.operatingSystem && (
                                       <div>OS: {log.details.operatingSystem}</div>
