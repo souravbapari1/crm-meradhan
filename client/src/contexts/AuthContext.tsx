@@ -166,34 +166,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Handle page refresh by restoring from sessionStorage backup
-    const handlePageReload = () => {
-      const token = localStorage.getItem("token");
-      const beforeUnloadTime = sessionStorage.getItem('beforeUnloadTime');
-      
-      if (!token && beforeUnloadTime && sessionStorage.getItem('tokenBackup')) {
-        const timeDiff = Date.now() - parseInt(beforeUnloadTime);
-        
-        if (timeDiff < 5000) {
-          // Less than 5 seconds = page refresh, restore session
-          const backupToken = sessionStorage.getItem('tokenBackup');
-          const backupSessionToken = sessionStorage.getItem('sessionTokenBackup');
-          
-          if (backupToken && backupSessionToken) {
-            console.log('📡 Page refresh detected - restoring session from backup');
-            localStorage.setItem("token", backupToken);
-            localStorage.setItem("sessionToken", backupSessionToken);
-          }
-        } else {
-          console.log('📡 Tab close detected - not restoring session');
-        }
-        
-        // Clean up backup
-        sessionStorage.removeItem('tokenBackup');
-        sessionStorage.removeItem('sessionTokenBackup');
-        sessionStorage.removeItem('beforeUnloadTime');
-      }
-    };
 
     // Send session end signal
     const sendSessionEndSignal = (reason: string, clearStorage: boolean = false) => {
@@ -230,9 +202,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Handle page reload detection on component mount
-    handlePageReload();
-
     // No need for additional backup creation - handled in beforeunload
     
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -245,15 +214,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, autoLogout]);
 
   useEffect(() => {
+    // Handle page reload detection first, before checking token
+    const handlePageReload = () => {
+      const token = localStorage.getItem("token");
+      const beforeUnloadTime = sessionStorage.getItem('beforeUnloadTime');
+      
+      if (!token && beforeUnloadTime && sessionStorage.getItem('tokenBackup')) {
+        const timeDiff = Date.now() - parseInt(beforeUnloadTime);
+        
+        if (timeDiff < 10000) { // Increased from 5 to 10 seconds for better reliability
+          // Page refresh detected, restore session
+          const backupToken = sessionStorage.getItem('tokenBackup');
+          const backupSessionToken = sessionStorage.getItem('sessionTokenBackup');
+          
+          if (backupToken && backupSessionToken) {
+            console.log('📡 Page refresh detected - restoring session from backup');
+            localStorage.setItem("token", backupToken);
+            localStorage.setItem("sessionToken", backupSessionToken);
+          }
+        } else {
+          console.log('📡 Tab close detected - not restoring session');
+        }
+        
+        // Clean up backup
+        sessionStorage.removeItem('tokenBackup');
+        sessionStorage.removeItem('sessionTokenBackup');
+        sessionStorage.removeItem('beforeUnloadTime');
+      }
+    };
+
+    // Run page reload detection first
+    handlePageReload();
+    
+    // Then check for token and verify user
     const token = localStorage.getItem("token");
     if (token) {
       // Verify token and get user info
       api.get("/auth/me")
         .then(response => {
           setUser(response.data);
+          console.log('✅ User authenticated from token');
         })
-        .catch(() => {
+        .catch((error) => {
+          console.log('❌ Token verification failed:', error.response?.status);
           localStorage.removeItem("token");
+          localStorage.removeItem("sessionToken");
         })
         .finally(() => {
           setIsLoading(false);
