@@ -13,8 +13,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Session timeout: 15 minutes (in milliseconds)
-const SESSION_TIMEOUT = 15 * 60 * 1000;
+// Session timeout: 60 minutes (in milliseconds) - Extended for CRM usage
+const SESSION_TIMEOUT = 60 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     timeoutRef.current = setTimeout(() => {
-      console.log('⏰ 15-minute inactivity timeout reached');
+      console.log('⏰ 60-minute inactivity timeout reached');
       autoLogout('timeout');
     }, SESSION_TIMEOUT);
   }, [user, autoLogout]);
@@ -147,18 +147,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Set a flag that tab is hidden and start a delayed logout
         sessionStorage.setItem('tabHiddenTime', Date.now().toString());
         
-        // Wait longer before considering it a browser close
+        // Wait much longer before considering it a browser close - CRM users need more time
         const timeoutId = setTimeout(() => {
           if (document.visibilityState === 'hidden') {
             // Check if the page was refreshed during the hidden period
             const tokenBackup = sessionStorage.getItem('tokenBackup');
             if (!tokenBackup) {
-              console.log('🚪 Tab/window closed - terminating session');
+              console.log('🚪 Tab/window closed after extended hidden period - terminating session');
               sendSessionEndSignal('browser_close', true);
               autoLogout('browser_close');
             }
           }
-        }, 30 * 1000); // 30 seconds delay for better accuracy
+        }, 10 * 60 * 1000); // 10 minutes delay - much more reasonable for CRM usage
         
         // Store timeout ID for potential cleanup
         (window as any).__visibilityTimeout = timeoutId;
