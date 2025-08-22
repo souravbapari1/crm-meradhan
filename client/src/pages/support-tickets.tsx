@@ -65,10 +65,10 @@ export default function SupportTickets() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      open: { variant: "destructive" as const, label: "Open" },
-      in_progress: { variant: "secondary" as const, label: "In Progress" },
+      open: { variant: "destructive" as const, label: "Open", className: "" },
+      in_progress: { variant: "secondary" as const, label: "In Progress", className: "" },
       resolved: { variant: "default" as const, label: "Resolved", className: "bg-green-100 text-green-800" },
-      closed: { variant: "outline" as const, label: "Closed" },
+      closed: { variant: "outline" as const, label: "Closed", className: "" },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.open;
@@ -81,10 +81,10 @@ export default function SupportTickets() {
 
   const getPriorityBadge = (priority: string) => {
     const priorityConfig = {
-      low: { variant: "outline" as const, label: "Low" },
-      medium: { variant: "secondary" as const, label: "Medium" },
+      low: { variant: "outline" as const, label: "Low", className: "" },
+      medium: { variant: "secondary" as const, label: "Medium", className: "" },
       high: { variant: "default" as const, label: "High", className: "bg-orange-100 text-orange-800" },
-      urgent: { variant: "destructive" as const, label: "Urgent" },
+      urgent: { variant: "destructive" as const, label: "Urgent", className: "" },
     };
     
     const config = priorityConfig[priority as keyof typeof priorityConfig] || priorityConfig.medium;

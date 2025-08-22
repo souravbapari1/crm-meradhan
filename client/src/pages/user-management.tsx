@@ -229,11 +229,11 @@ export default function UserManagement() {
 
   const getRoleBadge = (role: string) => {
     const roleConfig = {
-      admin: { variant: "destructive" as const, label: "Admin" },
+      admin: { variant: "destructive" as const, label: "Admin", className: "" },
       sales: { variant: "default" as const, label: "Sales", className: "bg-blue-100 text-blue-800" },
-      support: { variant: "secondary" as const, label: "Support" },
-      rm: { variant: "outline" as const, label: "RM" },
-      viewer: { variant: "outline" as const, label: "Viewer" },
+      support: { variant: "secondary" as const, label: "Support", className: "" },
+      rm: { variant: "outline" as const, label: "RM", className: "" },
+      viewer: { variant: "outline" as const, label: "Viewer", className: "" },
     };
     
     const config = roleConfig[role as keyof typeof roleConfig] || roleConfig.viewer;

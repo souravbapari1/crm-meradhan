@@ -34,7 +34,7 @@ export default function Leads() {
     queryKey: ["/api/leads"],
   });
 
-  const { data: followUps = [] } = useQuery({
+  const { data: followUps = [] } = useQuery<any[]>({
     queryKey: ["/api/leads", viewingFollowUps?.id, "follow-ups"],
     enabled: !!viewingFollowUps,
   });
@@ -116,16 +116,16 @@ export default function Leads() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      new: { variant: "default" as const, label: "New" },
-      contacted: { variant: "secondary" as const, label: "Contacted" },
-      qualified: { variant: "outline" as const, label: "Qualified" },
+      new: { variant: "default" as const, label: "New", className: "" },
+      contacted: { variant: "secondary" as const, label: "Contacted", className: "" },
+      qualified: { variant: "outline" as const, label: "Qualified", className: "" },
       converted: { variant: "default" as const, label: "Converted", className: "bg-green-100 text-green-800" },
-      lost: { variant: "destructive" as const, label: "Lost" },
+      lost: { variant: "destructive" as const, label: "Lost", className: "" },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.new;
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge variant={config.variant} className={config.className || ""}>
         {config.label}
       </Badge>
     );

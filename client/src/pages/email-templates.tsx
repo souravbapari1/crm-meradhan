@@ -80,12 +80,12 @@ export default function EmailTemplates() {
   const getCategoryBadge = (category: string) => {
     const categoryConfig = {
       welcome: { variant: "default" as const, label: "Welcome", className: "bg-blue-100 text-blue-800" },
-      follow_up: { variant: "secondary" as const, label: "Follow Up" },
-      rfq_confirmation: { variant: "outline" as const, label: "RFQ Confirmation" },
-      support: { variant: "destructive" as const, label: "Support" },
+      follow_up: { variant: "secondary" as const, label: "Follow Up", className: "" },
+      rfq_confirmation: { variant: "outline" as const, label: "RFQ Confirmation", className: "" },
+      support: { variant: "destructive" as const, label: "Support", className: "" },
     };
     
-    const config = categoryConfig[category as keyof typeof categoryConfig] || { variant: "outline" as const, label: category };
+    const config = categoryConfig[category as keyof typeof categoryConfig] || { variant: "outline" as const, label: category, className: "" };
     return (
       <Badge variant={config.variant} className={config.className}>
         {config.label}

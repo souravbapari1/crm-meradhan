@@ -62,10 +62,10 @@ export default function RFQManagement() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { variant: "secondary" as const, label: "Pending" },
+      pending: { variant: "secondary" as const, label: "Pending", className: "" },
       submitted: { variant: "default" as const, label: "Submitted", className: "bg-blue-100 text-blue-800" },
       executed: { variant: "default" as const, label: "Executed", className: "bg-green-100 text-green-800" },
-      cancelled: { variant: "destructive" as const, label: "Cancelled" },
+      cancelled: { variant: "destructive" as const, label: "Cancelled", className: "" },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;

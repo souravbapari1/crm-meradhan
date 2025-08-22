@@ -61,13 +61,13 @@ export default function Customers() {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       active: { variant: "default" as const, label: "Active", className: "bg-green-100 text-green-800" },
-      inactive: { variant: "secondary" as const, label: "Inactive" },
-      suspended: { variant: "destructive" as const, label: "Suspended" },
+      inactive: { variant: "secondary" as const, label: "Inactive", className: "" },
+      suspended: { variant: "destructive" as const, label: "Suspended", className: "" },
     };
     
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge variant={config.variant} className={config.className || ""}>
         {config.label}
       </Badge>
     );
@@ -75,14 +75,14 @@ export default function Customers() {
 
   const getKycBadge = (kycStatus: string) => {
     const kycConfig = {
-      pending: { variant: "secondary" as const, label: "Pending" },
+      pending: { variant: "secondary" as const, label: "Pending", className: "" },
       verified: { variant: "default" as const, label: "Verified", className: "bg-green-100 text-green-800" },
-      rejected: { variant: "destructive" as const, label: "Rejected" },
+      rejected: { variant: "destructive" as const, label: "Rejected", className: "" },
     };
     
     const config = kycConfig[kycStatus as keyof typeof kycConfig] || kycConfig.pending;
     return (
-      <Badge variant={config.variant} className={config.className}>
+      <Badge variant={config.variant} className={config.className || ""}>
         {config.label}
       </Badge>
     );
