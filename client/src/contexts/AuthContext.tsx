@@ -13,8 +13,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Session timeout: 60 minutes (in milliseconds) - Extended for CRM usage
-const SESSION_TIMEOUT = 60 * 60 * 1000;
+// Session timeout: 15 minutes (in milliseconds)
+const SESSION_TIMEOUT = 15 * 60 * 1000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     timeoutRef.current = setTimeout(() => {
-      console.log('⏰ 60-minute inactivity timeout reached');
+      console.log('⏰ 15-minute inactivity timeout reached');
       autoLogout('timeout');
     }, SESSION_TIMEOUT);
   }, [user, autoLogout]);
