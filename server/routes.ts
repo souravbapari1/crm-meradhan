@@ -92,6 +92,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
       
       await storage.createOTP(email, otp, expiresAt);
+      console.log("===========================================");
+      
       await emailService.sendOTP(email, otp);
       
       // Log attempt

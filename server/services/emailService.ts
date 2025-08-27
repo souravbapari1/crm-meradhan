@@ -4,14 +4,16 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
 
   constructor() {
+    console.log(process.env.SMTP_USER);
+
     // Configure email transporter
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      host: "smtp-relay.brevo.com",
       port: parseInt(process.env.SMTP_PORT || "587"),
       secure: false, // true for 465, false for other ports
       auth: {
-        user: process.env.SMTP_USER || process.env.EMAIL_USER,
-        pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
+        user: "8a96b2001@smtp-brevo.com",
+        pass: "nZ7pcDdOr9XxTBQw",
       },
     });
   }
@@ -19,7 +21,7 @@ export class EmailService {
   async sendOTP(email: string, otp: string): Promise<void> {
     try {
       const mailOptions = {
-        from: process.env.SMTP_FROM || "noreply@meradhan.co",
+        from:"noreply@meradhan.co",
         to: email,
         subject: "MeraDhan CRM - Your Login OTP",
         html: `
