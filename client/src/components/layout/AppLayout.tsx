@@ -15,7 +15,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background">
       <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
-      <div className="flex pt-16">
+      <div className="flex pt-28">
         <Sidebar 
           isOpen={sidebarOpen} 
           onClose={() => setSidebarOpen(false)} 

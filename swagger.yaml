@@ -1,0 +1,1665 @@
+openapi: 3.0.3
+info:
+  title: Bond CRM Hub API
+  description: |
+    A production-grade CRM application for an Online Bond Provider Platform.
+    This API provides comprehensive customer relationship management capabilities including
+    leads management, customer tracking, RFQ processing, support tickets, and user management.
+  version: 1.0.0
+  contact:
+    name: Bond CRM Hub Team
+    email: support@bondcrmhub.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+  - url: https://your-production-url.com/api
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/verify-otp endpoint
+
+  schemas:
+    # Authentication Schemas
+    LoginRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+
+    OTPVerificationRequest:
+      type: object
+      required:
+        - email
+        - otp
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        otp:
+          type: string
+          pattern: "^[0-9]{6}$"
+          example: "123456"
+
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    SessionEndRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum: [logout, timeout, browser_close]
+        timestamp:
+          type: string
+          format: date-time
+        sessionDuration:
+          type: integer
+        token:
+          type: string
+        sessionToken:
+          type: string
+
+    # User Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, sales, rm, support]
+        isActive:
+          type: boolean
+        lastLogin:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateUserRequest:
+      type: object
+      required:
+        - email
+        - name
+        - role
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, sales, rm, support]
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, sales, rm, support]
+        isActive:
+          type: boolean
+
+    # Lead Schemas
+    Lead:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        source:
+          type: string
+          enum: [website, referral, social_media, advertisement, cold_call, other]
+        status:
+          type: string
+          enum: [new, contacted, qualified, proposal, negotiation, won, lost]
+        assignedTo:
+          type: integer
+        expectedValue:
+          type: number
+          format: decimal
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateLeadRequest:
+      type: object
+      required:
+        - name
+        - email
+        - source
+        - status
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        source:
+          type: string
+          enum: [website, referral, social_media, advertisement, cold_call, other]
+        status:
+          type: string
+          enum: [new, contacted, qualified, proposal, negotiation, won, lost]
+        assignedTo:
+          type: integer
+        expectedValue:
+          type: number
+          format: decimal
+        notes:
+          type: string
+
+    UpdateLeadRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        source:
+          type: string
+          enum: [website, referral, social_media, advertisement, cold_call, other]
+        status:
+          type: string
+          enum: [new, contacted, qualified, proposal, negotiation, won, lost]
+        assignedTo:
+          type: integer
+        expectedValue:
+          type: number
+          format: decimal
+        notes:
+          type: string
+
+    # Customer Schemas
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+        relationshipManager:
+          type: integer
+        totalInvestment:
+          type: number
+          format: decimal
+        riskProfile:
+          type: string
+          enum: [low, medium, high]
+        kycStatus:
+          type: string
+          enum: [pending, verified, rejected]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCustomerRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+        relationshipManager:
+          type: integer
+        totalInvestment:
+          type: number
+          format: decimal
+        riskProfile:
+          type: string
+          enum: [low, medium, high]
+        kycStatus:
+          type: string
+          enum: [pending, verified, rejected]
+
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        company:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+        relationshipManager:
+          type: integer
+        totalInvestment:
+          type: number
+          format: decimal
+        riskProfile:
+          type: string
+          enum: [low, medium, high]
+        kycStatus:
+          type: string
+          enum: [pending, verified, rejected]
+
+    # RFQ Schemas
+    RFQ:
+      type: object
+      properties:
+        id:
+          type: integer
+        rfqNumber:
+          type: string
+        customerId:
+          type: integer
+        bondType:
+          type: string
+        faceValue:
+          type: number
+          format: decimal
+        maturityDate:
+          type: string
+          format: date
+        couponRate:
+          type: number
+          format: decimal
+        status:
+          type: string
+          enum: [draft, submitted, under_review, quoted, accepted, rejected]
+        notes:
+          type: string
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateRFQRequest:
+      type: object
+      required:
+        - customerId
+        - bondType
+        - faceValue
+        - maturityDate
+      properties:
+        customerId:
+          type: integer
+        bondType:
+          type: string
+        faceValue:
+          type: number
+          format: decimal
+        maturityDate:
+          type: string
+          format: date
+        couponRate:
+          type: number
+          format: decimal
+        status:
+          type: string
+          enum: [draft, submitted, under_review, quoted, accepted, rejected]
+        notes:
+          type: string
+        createdBy:
+          type: integer
+
+    # Support Ticket Schemas
+    SupportTicket:
+      type: object
+      properties:
+        id:
+          type: integer
+        ticketNumber:
+          type: string
+        customerId:
+          type: integer
+        subject:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        assignedTo:
+          type: integer
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateSupportTicketRequest:
+      type: object
+      required:
+        - customerId
+        - subject
+        - description
+        - priority
+      properties:
+        customerId:
+          type: integer
+        subject:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        assignedTo:
+          type: integer
+        createdBy:
+          type: integer
+
+    # Email Template Schemas
+    EmailTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        type:
+          type: string
+          enum: [welcome, follow_up, proposal, reminder, newsletter]
+        isActive:
+          type: boolean
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateEmailTemplateRequest:
+      type: object
+      required:
+        - name
+        - subject
+        - body
+        - type
+      properties:
+        name:
+          type: string
+        subject:
+          type: string
+        body:
+          type: string
+        type:
+          type: string
+          enum: [welcome, follow_up, proposal, reminder, newsletter]
+        isActive:
+          type: boolean
+          default: true
+        createdBy:
+          type: integer
+
+    # Dashboard Schemas
+    DashboardKPIs:
+      type: object
+      properties:
+        totalLeads:
+          type: integer
+        activeCustomers:
+          type: integer
+        totalRFQs:
+          type: integer
+        pendingTickets:
+          type: integer
+        monthlyRevenue:
+          type: number
+          format: decimal
+        conversionRate:
+          type: number
+          format: decimal
+
+    LeadSource:
+      type: object
+      properties:
+        source:
+          type: string
+        count:
+          type: integer
+        percentage:
+          type: number
+          format: decimal
+
+    SalesPerformance:
+      type: object
+      properties:
+        period:
+          type: string
+        revenue:
+          type: number
+          format: decimal
+        deals:
+          type: integer
+        target:
+          type: number
+          format: decimal
+
+    Activity:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        entityType:
+          type: string
+        entityId:
+          type: integer
+        action:
+          type: string
+        details:
+          type: object
+        ipAddress:
+          type: string
+        userAgent:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    # Lead Follow-up Schemas
+    LeadFollowUp:
+      type: object
+      properties:
+        id:
+          type: integer
+        leadId:
+          type: integer
+        note:
+          type: string
+        followUpDate:
+          type: string
+          format: date-time
+        completed:
+          type: boolean
+        createdBy:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateFollowUpRequest:
+      type: object
+      required:
+        - note
+        - followUpDate
+      properties:
+        note:
+          type: string
+        followUpDate:
+          type: string
+          format: date-time
+        completed:
+          type: boolean
+          default: false
+
+    # Page Tracking Schemas
+    PageTrackingStartRequest:
+      type: object
+      required:
+        - sessionToken
+        - pagePath
+        - pageTitle
+      properties:
+        sessionToken:
+          type: string
+        pagePath:
+          type: string
+        pageTitle:
+          type: string
+        referrer:
+          type: string
+
+    PageTrackingEndRequest:
+      type: object
+      required:
+        - pageViewId
+        - exitTime
+        - duration
+      properties:
+        pageViewId:
+          type: integer
+        exitTime:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+        scrollDepth:
+          type: number
+          format: decimal
+        interactions:
+          type: integer
+        token:
+          type: string
+
+    # Error Response
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+
+    # Success Response
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/request-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Request OTP for login
+      description: Send OTP to user's email for authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to send OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/verify-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Verify OTP and login
+      description: Verify OTP and receive JWT token for authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerificationRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: User not found or inactive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Login failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Logout the authenticated user
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/session-end:
+    post:
+      tags:
+        - Authentication
+      summary: End user session
+      description: End user session with tracking information
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionEndRequest'
+      responses:
+        '200':
+          description: Session ended successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '500':
+          description: Failed to end session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user info
+      description: Get information about the currently authenticated user
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Dashboard Endpoints
+  /dashboard/kpis:
+    get:
+      tags:
+        - Dashboard
+      summary: Get dashboard KPIs
+      description: Retrieve key performance indicators for the dashboard
+      responses:
+        '200':
+          description: Dashboard KPIs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardKPIs'
+        '500':
+          description: Failed to fetch KPIs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dashboard/lead-sources:
+    get:
+      tags:
+        - Dashboard
+      summary: Get lead source analytics
+      description: Retrieve analytics data for lead sources
+      responses:
+        '200':
+          description: Lead source analytics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeadSource'
+        '500':
+          description: Failed to fetch lead sources
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dashboard/sales-performance:
+    get:
+      tags:
+        - Dashboard
+      summary: Get sales performance data
+      description: Retrieve sales performance analytics
+      responses:
+        '200':
+          description: Sales performance data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalesPerformance'
+        '500':
+          description: Failed to fetch sales performance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /dashboard/recent-activities:
+    get:
+      tags:
+        - Dashboard
+      summary: Get recent activities
+      description: Retrieve recent system activities (admin sees all, others see own)
+      responses:
+        '200':
+          description: Recent activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+        '500':
+          description: Failed to fetch recent activities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Leads Endpoints
+  /leads:
+    get:
+      tags:
+        - Leads
+      summary: Get leads
+      description: Retrieve leads (admin sees all, others see assigned to them)
+      responses:
+        '200':
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lead'
+        '500':
+          description: Failed to fetch leads
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Leads
+      summary: Create a new lead
+      description: Create a new lead (requires admin or sales role)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLeadRequest'
+      responses:
+        '201':
+          description: Lead created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '500':
+          description: Failed to create lead
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /leads/{id}:
+    put:
+      tags:
+        - Leads
+      summary: Update a lead
+      description: Update an existing lead (requires admin or sales role)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lead ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLeadRequest'
+      responses:
+        '200':
+          description: Lead updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lead'
+        '404':
+          description: Lead not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to update lead
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Leads
+      summary: Delete a lead
+      description: Delete a lead (requires admin role)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lead ID
+      responses:
+        '200':
+          description: Lead deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Lead not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to delete lead
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /leads/{id}/follow-ups:
+    get:
+      tags:
+        - Leads
+      summary: Get lead follow-ups
+      description: Retrieve follow-up records for a specific lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lead ID
+      responses:
+        '200':
+          description: List of follow-ups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeadFollowUp'
+        '500':
+          description: Failed to fetch follow-ups
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Leads
+      summary: Create lead follow-up
+      description: Create a new follow-up record for a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Lead ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFollowUpRequest'
+      responses:
+        '201':
+          description: Follow-up created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadFollowUp'
+        '500':
+          description: Failed to create follow-up
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Customers Endpoints
+  /customers:
+    get:
+      tags:
+        - Customers
+      summary: Get customers
+      description: Retrieve customers (admin sees all, RM sees assigned)
+      responses:
+        '200':
+          description: List of customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Customer'
+        '500':
+          description: Failed to fetch customers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Customers
+      summary: Create a new customer
+      description: Create a new customer (requires admin, sales, or rm role)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '500':
+          description: Failed to create customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /customers/{id}:
+    put:
+      tags:
+        - Customers
+      summary: Update a customer
+      description: Update an existing customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Customer ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+      responses:
+        '200':
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to update customer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # RFQ Endpoints
+  /rfqs:
+    get:
+      tags:
+        - RFQs
+      summary: Get RFQs
+      description: Retrieve all Request for Quotes
+      responses:
+        '200':
+          description: List of RFQs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RFQ'
+        '500':
+          description: Failed to fetch RFQs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - RFQs
+      summary: Create a new RFQ
+      description: Create a new Request for Quote (requires admin, sales, or rm role)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRFQRequest'
+      responses:
+        '201':
+          description: RFQ created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RFQ'
+        '500':
+          description: Failed to create RFQ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Support Tickets Endpoints
+  /support-tickets:
+    get:
+      tags:
+        - Support Tickets
+      summary: Get support tickets
+      description: Retrieve support tickets (admin/support sees all, others see assigned)
+      responses:
+        '200':
+          description: List of support tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupportTicket'
+        '500':
+          description: Failed to fetch support tickets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Support Tickets
+      summary: Create a new support ticket
+      description: Create a new support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSupportTicketRequest'
+      responses:
+        '201':
+          description: Support ticket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicket'
+        '500':
+          description: Failed to create support ticket
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Email Templates Endpoints
+  /email-templates:
+    get:
+      tags:
+        - Email Templates
+      summary: Get email templates
+      description: Retrieve all email templates
+      responses:
+        '200':
+          description: List of email templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmailTemplate'
+        '500':
+          description: Failed to fetch email templates
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Email Templates
+      summary: Create a new email template
+      description: Create a new email template (requires admin or sales role)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmailTemplateRequest'
+      responses:
+        '201':
+          description: Email template created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '500':
+          description: Failed to create email template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # User Management Endpoints (Admin Only)
+  /users:
+    get:
+      tags:
+        - User Management
+      summary: Get all users
+      description: Retrieve all users (admin only)
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '500':
+          description: Failed to fetch users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - User Management
+      summary: Create a new user
+      description: Create a new user (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '500':
+          description: Failed to create user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/{id}:
+    put:
+      tags:
+        - User Management
+      summary: Update a user
+      description: Update an existing user (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: Cannot deactivate main administrator
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to update user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Activity Logs Endpoints (Admin Only)
+  /activity-logs:
+    get:
+      tags:
+        - Activity Logs
+      summary: Get activity logs
+      description: Retrieve system activity logs (admin only)
+      responses:
+        '200':
+          description: List of activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+        '500':
+          description: Failed to fetch activity logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Login Logs Endpoints (Admin Only)
+  /login-logs:
+    get:
+      tags:
+        - Login Logs
+      summary: Get login logs
+      description: Retrieve login attempt logs (admin only)
+      responses:
+        '200':
+          description: List of login logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    userId:
+                      type: integer
+                    email:
+                      type: string
+                    ipAddress:
+                      type: string
+                    userAgent:
+                      type: string
+                    browserName:
+                      type: string
+                    deviceType:
+                      type: string
+                    operatingSystem:
+                      type: string
+                    action:
+                      type: string
+                    success:
+                      type: boolean
+                    createdAt:
+                      type: string
+                      format: date-time
+        '500':
+          description: Failed to fetch login logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Page Tracking Endpoints
+  /page-tracking/start:
+    post:
+      tags:
+        - Page Tracking
+      summary: Start page tracking
+      description: Start tracking a page view session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageTrackingStartRequest'
+      responses:
+        '200':
+          description: Page tracking started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pageViewId:
+                    type: integer
+                  sessionId:
+                    type: integer
+        '500':
+          description: Failed to start page tracking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /page-tracking/end:
+    post:
+      tags:
+        - Page Tracking
+      summary: End page tracking
+      description: End a page view tracking session
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PageTrackingEndRequest'
+      responses:
+        '200':
+          description: Page tracking ended successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Access token required or invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to end page tracking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /page-tracking/update:
+    post:
+      tags:
+        - Page Tracking
+      summary: Update page tracking
+      description: Update page tracking with interaction data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pageViewId
+              properties:
+                pageViewId:
+                  type: integer
+                interactions:
+                  type: integer
+                action:
+                  type: string
+      responses:
+        '200':
+          description: Page tracking updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '500':
+          description: Failed to update page tracking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Session Analytics Endpoint (Admin Only)
+  /session-analytics:
+    get:
+      tags:
+        - Session Analytics
+      summary: Get session analytics
+      description: Retrieve session analytics data (admin only)
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date for analytics
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date for analytics
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          description: Filter by user ID
+      responses:
+        '200':
+          description: Session analytics data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    userId:
+                      type: integer
+                    sessionToken:
+                      type: string
+                    startTime:
+                      type: string
+                      format: date-time
+                    endTime:
+                      type: string
+                      format: date-time
+                    duration:
+                      type: integer
+                    ipAddress:
+                      type: string
+                    userAgent:
+                      type: string
+                    browserName:
+                      type: string
+                    deviceType:
+                      type: string
+                    operatingSystem:
+                      type: string
+                    totalPages:
+                      type: integer
+                    endReason:
+                      type: string
+        '500':
+          description: Failed to fetch session analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Authentication
+    description: User authentication and session management
+  - name: Dashboard
+    description: Dashboard analytics and KPIs
+  - name: Leads
+    description: Lead management operations
+  - name: Customers
+    description: Customer management operations
+  - name: RFQs
+    description: Request for Quote management
+  - name: Support Tickets
+    description: Support ticket management
+  - name: Email Templates
+    description: Email template management
+  - name: User Management
+    description: User administration (admin only)
+  - name: Activity Logs
+    description: System activity logging (admin only)
+  - name: Login Logs
+    description: Login attempt tracking (admin only)
+  - name: Page Tracking
+    description: User page view tracking
+  - name: Session Analytics
+    description: User session analytics (admin only)

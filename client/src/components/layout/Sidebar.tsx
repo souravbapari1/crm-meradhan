@@ -58,7 +58,7 @@ export default function Sidebar({ isOpen, onClose, isMobile }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] w-64 transform bg-sidebar-background border-r border-sidebar-border transition-transform duration-300 ease-in-out",
+        "fixed left-0 top-16 z-30 h-[calc(100vh-4rem)] pt-5 w-64 transform bg-sidebar-background border-r border-sidebar-border transition-transform duration-300 ease-in-out",
         isOpen || !isMobile ? "translate-x-0" : "-translate-x-full",
         !isMobile && "lg:translate-x-0"
       )}
